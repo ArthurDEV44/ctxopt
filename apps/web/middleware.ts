@@ -6,7 +6,6 @@ const isPublicRoute = createRouteMatcher([
   "/pricing",
   "/sign-in(.*)",
   "/sign-up(.*)",
-  "/api/v1/proxy/(.*)", // Proxy API uses API key auth
   "/api/webhooks/(.*)", // Webhooks are verified separately
 ]);
 
