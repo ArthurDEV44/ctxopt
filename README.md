@@ -52,25 +52,27 @@ ctxopt/
 
 ## Configuration
 
-### For Claude Code
+### MCP Server
+
+Add CtxOpt to your Claude Code configuration (`~/.claude/settings.json`):
 
 ```json
 {
-  "apiProvider": "custom",
-  "apiBaseUrl": "https://app.ctxopt.dev/api/v1/proxy",
-  "apiKey": "ctx_your_key_here"
+  "mcpServers": {
+    "ctxopt": {
+      "command": "npx",
+      "args": ["@ctxopt/mcp-server"],
+      "env": {
+        "CTXOPT_API_KEY": "ctx_your_key_here"
+      }
+    }
+  }
 }
 ```
 
 ### For Cursor/Windsurf
 
-Set Base URL to `https://app.ctxopt.dev/api/v1/proxy` and use your CtxOpt API key.
-
-### MCP Server
-
-```bash
-npx @ctxopt/mcp-server --api-key=ctx_your_key_here
-```
+Configure the MCP server in your IDE settings. See documentation for details.
 
 ## Tech Stack
 

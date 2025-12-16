@@ -62,12 +62,12 @@ export default async function DashboardPage() {
               2
             </div>
             <div>
-              <p className="font-medium">Configure Your Tool</p>
+              <p className="font-medium">Install the MCP Server</p>
               <p className="text-sm text-muted-foreground">
-                Point Claude Code, Cursor, or Windsurf to our proxy URL.
+                Add CtxOpt MCP Server to Claude Code, Cursor, or Windsurf.
               </p>
               <pre className="mt-2 rounded bg-muted p-2 text-xs">
-                https://app.ctxopt.dev/api/v1/proxy
+                npx @ctxopt/mcp-server
               </pre>
             </div>
           </div>
@@ -90,7 +90,7 @@ export default async function DashboardPage() {
       <div className="rounded-lg border p-6">
         <h2 className="mb-4 text-xl font-semibold">Recent Activity</h2>
         <p className="text-muted-foreground">
-          No activity yet. Start using the proxy to see your requests here.
+          No activity yet. Start using the MCP server to see your sessions here.
         </p>
       </div>
 

@@ -85,9 +85,9 @@ export default function HomePage() {
               <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary text-xl font-bold text-primary-foreground">
                 1
               </div>
-              <h3 className="mb-2 text-lg font-semibold">Connect</h3>
+              <h3 className="mb-2 text-lg font-semibold">Install</h3>
               <p className="text-muted-foreground">
-                Point your AI tool to our proxy. One line change.
+                Add our MCP server to your IDE. One command.
               </p>
             </div>
 
