@@ -31,6 +31,7 @@ ${COLORS.bright}Setup Options:${COLORS.reset}
 ${COLORS.bright}Server Options:${COLORS.reset}
   --api-key=KEY     Your CtxOpt API key (optional, enables cloud sync)
   --api-url=URL     Custom API URL (default: https://app.ctxopt.dev/api)
+  --verbose         Enable verbose logging (shows tool calls, timing, tokens)
 
 ${COLORS.bright}Other Options:${COLORS.reset}
   --version, -v     Show version number
@@ -74,6 +75,7 @@ async function main() {
       const config = {
         apiKey: undefined,
         apiBaseUrl: "https://app.ctxopt.dev/api",
+        verbose: false,
       };
 
       for (const arg of args.slice(1)) {
@@ -81,6 +83,8 @@ async function main() {
           config.apiKey = arg.split("=")[1];
         } else if (arg.startsWith("--api-url=")) {
           config.apiBaseUrl = arg.split("=")[1];
+        } else if (arg === "--verbose") {
+          config.verbose = true;
         }
       }
 
