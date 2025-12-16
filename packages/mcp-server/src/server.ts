@@ -24,6 +24,7 @@ import { optimizationTips, optimizationTipsSchema } from "./tools/optimization-t
 import { sessionStatsTool } from "./tools/session-stats.js";
 import { analyzeBuildOutputTool } from "./tools/analyze-build-output.js";
 import { detectRetryLoopTool } from "./tools/detect-retry-loop.js";
+import { compressContextTool } from "./tools/compress-context.js";
 
 // Utils
 import { detectProject } from "./utils/project-detector.js";
@@ -97,6 +98,7 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   tools.register(sessionStatsTool);
   tools.register(analyzeBuildOutputTool);
   tools.register(detectRetryLoopTool);
+  tools.register(compressContextTool);
 
   // Create MCP server
   const server = new Server(
