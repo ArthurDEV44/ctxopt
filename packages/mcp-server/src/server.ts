@@ -28,6 +28,7 @@ import { compressContextTool } from "./tools/compress-context.js";
 import { smartFileReadTool } from "./tools/smart-file-read.js";
 import { deduplicateErrorsTool } from "./tools/deduplicate-errors.js";
 import { summarizeLogsTool } from "./tools/summarize-logs.js";
+import { autoOptimizeTool } from "./tools/auto-optimize.js";
 
 // Utils
 import { detectProject } from "./utils/project-detector.js";
@@ -105,6 +106,7 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   tools.register(smartFileReadTool);
   tools.register(deduplicateErrorsTool);
   tools.register(summarizeLogsTool);
+  tools.register(autoOptimizeTool);
 
   // Create MCP server
   const server = new Server(
