@@ -19,6 +19,7 @@
     "@clerk/nextjs": "^6.12.0",
     "@ctxopt/shared": "workspace:*",
     "@neondatabase/serverless": "^0.10.4",
+    "@polar-sh/sdk": "^0.41.5",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "drizzle-orm": "^0.38.3",

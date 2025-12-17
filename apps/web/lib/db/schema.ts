@@ -24,6 +24,7 @@ export const users = pgTable(
     name: text("name"),
     imageUrl: text("image_url"),
     plan: text("plan").notNull().default("free"), // 'free' | 'pro' | 'enterprise'
+    polarSubscriptionId: text("polar_subscription_id"),
     monthlyTokenLimit: bigint("monthly_token_limit", { mode: "number" })
       .notNull()
       .default(100000),

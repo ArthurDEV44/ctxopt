@@ -8,6 +8,13 @@
       "when": 1765891600967,
       "tag": "0000_free_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1765962468320,
+      "tag": "0001_exotic_centennial",
+      "breakpoints": true
     }
   ]
 }
