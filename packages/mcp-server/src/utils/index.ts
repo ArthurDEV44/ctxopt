@@ -7,3 +7,4 @@ export * from "./language-detector.js";
 export * from "./error-normalizer.js";
 export * from "./signature-grouper.js";
 export * from "./log-parser.js";
+export * from "./token-counter.js";

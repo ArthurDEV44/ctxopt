@@ -1,8 +1,8 @@
 /**
  * Auto-Optimize Tool
  *
- * Outil unifié qui auto-détecte le type de contenu et applique
- * l'optimisation appropriée automatiquement.
+ * Unified tool that auto-detects content type and applies
+ * the appropriate optimization automatically.
  */
 
 import type { ToolDefinition } from "./registry.js";
@@ -13,22 +13,23 @@ import { compressContent } from "../compressors/index.js";
 import { getSummarizer } from "../summarizers/index.js";
 import { analyzeBuildOutput } from "../parsers/index.js";
 import { groupBySignature, formatGroups, calculateStats } from "../utils/signature-grouper.js";
+import { countTokens } from "../utils/token-counter.js";
 
 const autoOptimizeSchema = {
   type: "object" as const,
   properties: {
     content: {
       type: "string",
-      description: "Le contenu à optimiser (output de commande, logs, erreurs, code, etc.)",
+      description: "The content to optimize (command output, logs, errors, code, etc.)",
     },
     hint: {
       type: "string",
       enum: ["build", "logs", "errors", "code", "auto"],
-      description: "Indice sur le type de contenu (optionnel, auto-détecté par défaut)",
+      description: "Hint about content type (optional, auto-detected by default)",
     },
     aggressive: {
       type: "boolean",
-      description: "Mode agressif: compression maximale même si perte d'information (default: false)",
+      description: "Aggressive mode: maximum compression even with information loss (default: false)",
     },
   },
   required: ["content"],
@@ -49,13 +50,8 @@ interface OptimizationResult {
   method: string;
 }
 
-function estimateTokens(text: string): number {
-  // Approximation simple: ~4 caractères par token
-  return Math.ceil(text.length / 4);
-}
-
 function isBuildOutput(content: string): boolean {
-  // Détecter si c'est une sortie de build
+  // Detect if content is build output
   return (
     content.includes("error TS") ||
     content.includes("warning TS") ||
@@ -68,7 +64,7 @@ function isBuildOutput(content: string): boolean {
 }
 
 function optimizeBuildOutput(content: string): OptimizationResult {
-  const originalTokens = estimateTokens(content);
+  const originalTokens = countTokens(content);
   const result = analyzeBuildOutput(content);
 
   return {
@@ -82,13 +78,13 @@ function optimizeBuildOutput(content: string): OptimizationResult {
 }
 
 function optimizeLogs(content: string): OptimizationResult {
-  const originalTokens = estimateTokens(content);
+  const originalTokens = countTokens(content);
   const summarizer = getSummarizer(content);
   const summaryResult = summarizer.summarize(content, { detail: "normal" });
 
-  // Formater le résumé en texte
+  // Format summary as text
   const summaryText = formatLogSummary(summaryResult);
-  const optimizedTokens = estimateTokens(summaryText);
+  const optimizedTokens = countTokens(summaryText);
 
   return {
     optimizedContent: summaryText,
@@ -106,7 +102,7 @@ function formatLogSummary(summary: import("../summarizers/types.js").LogSummary)
   parts.push("");
 
   if (summary.errors.length > 0) {
-    parts.push("### Erreurs");
+    parts.push("### Errors");
     for (const error of summary.errors.slice(0, 10)) {
       const count = error.count > 1 ? ` (×${error.count})` : "";
       parts.push(`- ${error.timestamp || ""} ${error.message}${count}`);
@@ -124,7 +120,7 @@ function formatLogSummary(summary: import("../summarizers/types.js").LogSummary)
   }
 
   if (summary.keyEvents.length > 0) {
-    parts.push("### Événements clés");
+    parts.push("### Key Events");
     for (const event of summary.keyEvents.slice(0, 5)) {
       parts.push(`- ${event.timestamp || ""} ${event.message}`);
     }
@@ -134,17 +130,17 @@ function formatLogSummary(summary: import("../summarizers/types.js").LogSummary)
 }
 
 function optimizeErrors(content: string): OptimizationResult {
-  const originalTokens = estimateTokens(content);
+  const originalTokens = countTokens(content);
   const lines = content.split("\n").filter((l) => l.trim());
 
-  // Grouper les erreurs par signature
+  // Group errors by signature
   const result = groupBySignature(lines);
   const stats = calculateStats(result);
   const formatted = formatGroups(result);
 
-  const header = `**${stats.originalLines} lignes → ${stats.uniqueErrors} patterns uniques** (${stats.totalDuplicates} duplicates supprimés)\n\n`;
+  const header = `**${stats.originalLines} lines → ${stats.uniqueErrors} unique patterns** (${stats.totalDuplicates} duplicates removed)\n\n`;
   const optimizedContent = header + formatted;
-  const optimizedTokens = estimateTokens(optimizedContent);
+  const optimizedTokens = countTokens(optimizedContent);
 
   return {
     optimizedContent,
@@ -157,7 +153,7 @@ function optimizeErrors(content: string): OptimizationResult {
 }
 
 function optimizeGeneric(content: string, aggressive: boolean): OptimizationResult {
-  const originalTokens = estimateTokens(content);
+  const originalTokens = countTokens(content);
   const result = compressContent(content, {
     detail: aggressive ? "minimal" : "normal",
   });
@@ -178,13 +174,13 @@ async function autoOptimize(
 ): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
   const { content, hint = "auto", aggressive = false } = args;
 
-  // Seuil minimum pour l'optimisation (500 caractères ~ 125 tokens)
+  // Minimum threshold for optimization (500 chars ~ 125 tokens)
   if (content.length < 500) {
     return {
       content: [
         {
           type: "text",
-          text: `## Contenu déjà optimal\n\nLe contenu est trop court (${content.length} chars) pour bénéficier d'une optimisation.\n\n${content}`,
+          text: `## Already Optimal\n\nContent is too short (${content.length} chars) to benefit from optimization.\n\n${content}`,
         },
       ],
     };
@@ -192,7 +188,7 @@ async function autoOptimize(
 
   let result: OptimizationResult;
 
-  // Déterminer le type de contenu
+  // Determine content type
   if (hint === "build" || (hint === "auto" && isBuildOutput(content))) {
     result = optimizeBuildOutput(content);
   } else if (hint === "logs" || (hint === "auto" && detectContentType(content) === "logs")) {
@@ -200,7 +196,7 @@ async function autoOptimize(
   } else if (hint === "errors") {
     result = optimizeErrors(content);
   } else {
-    // Utiliser la détection automatique de type
+    // Use automatic type detection
     const detectedType: ContentType = detectContentType(content);
 
     switch (detectedType) {
@@ -215,12 +211,12 @@ async function autoOptimize(
     }
   }
 
-  // Formater la sortie
-  const output = `## Contenu Optimisé
+  // Format output
+  const output = `## Optimized Content
 
-**Type détecté:** ${result.detectedType}
-**Méthode:** ${result.method}
-**Tokens:** ${result.originalTokens} → ${result.optimizedTokens} (${result.savingsPercent}% économisés)
+**Detected type:** ${result.detectedType}
+**Method:** ${result.method}
+**Tokens:** ${result.originalTokens} → ${result.optimizedTokens} (${result.savingsPercent}% saved)
 
 ---
 
@@ -233,17 +229,17 @@ ${result.optimizedContent}`;
 
 export const autoOptimizeTool: ToolDefinition = {
   name: "auto_optimize",
-  description: `Optimise automatiquement n'importe quel contenu volumineux.
+  description: `Automatically optimize any verbose content.
 
-UTILISATION RECOMMANDÉE: Appeler cet outil après toute commande Bash qui produit un output > 500 caractères.
+RECOMMENDED USAGE: Call this tool after any Bash command that produces output > 500 characters.
 
-Auto-détecte le type de contenu et applique l'optimisation appropriée:
-- Erreurs de build → groupage et déduplication (95%+ réduction)
-- Logs → résumé intelligent (80-90% réduction)
-- Erreurs répétitives → déduplication par pattern
-- Autre contenu → compression intelligente (40-60% réduction)
+Auto-detects content type and applies appropriate optimization:
+- Build errors → grouping and deduplication (95%+ reduction)
+- Logs → intelligent summary (80-90% reduction)
+- Repetitive errors → pattern-based deduplication
+- Other content → intelligent compression (40-60% reduction)
 
-Exemple: Après "npm run build" qui échoue, passer l'output à auto_optimize pour obtenir un résumé structuré des erreurs.`,
+Example: After "npm run build" fails, pass the output to auto_optimize to get a structured error summary.`,
   inputSchema: autoOptimizeSchema,
   execute: async (args, state) => autoOptimize(args as AutoOptimizeArgs, state),
 };

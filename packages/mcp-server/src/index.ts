@@ -21,7 +21,7 @@ export { getStats } from "./tools/get-stats.js";
 export { optimizationTips } from "./tools/optimization-tips.js";
 export { sessionStatsTool, executeSessionStats } from "./tools/session-stats.js";
 export { analyzeBuildOutputTool, executeAnalyzeBuildOutput } from "./tools/analyze-build-output.js";
-export { createToolRegistry, getToolRegistry, type ToolRegistry, type ToolDefinition } from "./tools/registry.js";
+export { createToolRegistry, type ToolRegistry, type ToolDefinition } from "./tools/registry.js";
 
 // Parsers
 export * from "./parsers/index.js";

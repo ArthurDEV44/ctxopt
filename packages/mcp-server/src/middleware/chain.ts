@@ -2,9 +2,10 @@
  * Middleware Chain
  *
  * Manages the execution of middleware before and after tool calls.
+ * Errors in middleware are tracked but don't stop execution (fail-safe).
  */
 
-import type { Middleware, ToolContext, ToolResult } from "./types.js";
+import type { Middleware, MiddlewareError, ToolContext, ToolResult } from "./types.js";
 
 export class MiddlewareChain {
   private middlewares: Middleware[] = [];
@@ -39,6 +40,26 @@ export class MiddlewareChain {
   }
 
   /**
+   * Track a middleware error
+   */
+  private trackError(
+    ctx: ToolContext,
+    middlewareName: string,
+    phase: MiddlewareError["phase"],
+    error: unknown
+  ): void {
+    const err = error instanceof Error ? error : new Error(String(error));
+    ctx.middlewareErrors.push({
+      middlewareName,
+      phase,
+      error: err,
+      timestamp: Date.now(),
+    });
+    // Also log for debugging
+    console.error(`[ctxopt] Middleware ${middlewareName} ${phase} error:`, err.message);
+  }
+
+  /**
    * Execute beforeTool hooks for all middlewares
    * Returns null if any middleware wants to skip execution
    */
@@ -56,8 +77,8 @@ export class MiddlewareChain {
         }
         currentCtx = result;
       } catch (error) {
-        console.error(`[ctxopt] Middleware ${middleware.name} beforeTool error:`, error);
-        // Continue with unmodified context on error
+        this.trackError(currentCtx, middleware.name, "beforeTool", error);
+        // Continue with unmodified context on error (fail-safe)
       }
     }
 
@@ -79,8 +100,8 @@ export class MiddlewareChain {
       try {
         currentResult = await middleware.afterTool(ctx, currentResult);
       } catch (error) {
-        console.error(`[ctxopt] Middleware ${middleware.name} afterTool error:`, error);
-        // Continue with unmodified result on error
+        this.trackError(ctx, middleware.name, "afterTool", error);
+        // Continue with unmodified result on error (fail-safe)
       }
     }
 
@@ -101,24 +122,25 @@ export class MiddlewareChain {
           return result;
         }
       } catch (middlewareError) {
-        console.error(`[ctxopt] Middleware ${middleware.name} onError error:`, middlewareError);
+        this.trackError(ctx, middleware.name, "onError", middlewareError);
+        // Continue to next middleware (fail-safe)
       }
     }
 
     return null;
   }
-}
 
-// Singleton instance for the default chain
-let defaultChain: MiddlewareChain | null = null;
-
-export function getMiddlewareChain(): MiddlewareChain {
-  if (!defaultChain) {
-    defaultChain = new MiddlewareChain();
+  /**
+   * Get count of errors that occurred during middleware execution
+   */
+  getErrorCount(ctx: ToolContext): number {
+    return ctx.middlewareErrors.length;
   }
-  return defaultChain;
 }
 
+/**
+ * Create a new middleware chain instance
+ */
 export function createMiddlewareChain(): MiddlewareChain {
   return new MiddlewareChain();
 }

@@ -7,12 +7,21 @@
 
 import type { SessionState } from "../state/session.js";
 
+export interface MiddlewareError {
+  middlewareName: string;
+  phase: "beforeTool" | "afterTool" | "onError";
+  error: Error;
+  timestamp: number;
+}
+
 export interface ToolContext {
   toolName: string;
   arguments: Record<string, unknown>;
   state: SessionState;
   startTime: number;
   metadata: Record<string, unknown>;
+  /** Errors encountered during middleware execution (non-fatal) */
+  middlewareErrors: MiddlewareError[];
 }
 
 export interface ToolResult {

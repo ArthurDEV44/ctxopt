@@ -9,7 +9,12 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 
 // State management
-import { createSessionState, setProject, type SessionState } from "./state/session.js";
+import {
+  createSessionState,
+  setProject,
+  cleanupStaleEntries,
+  type SessionState,
+} from "./state/session.js";
 
 // Middleware
 import { createMiddlewareChain, type MiddlewareChain } from "./middleware/chain.js";
@@ -147,10 +152,38 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
 }
 
 /**
+ * Cleanup session state before exit
+ */
+function setupCleanupHooks(state: SessionState, verbose: boolean): void {
+  const cleanup = () => {
+    const { errorsRemoved, patternsRemoved } = cleanupStaleEntries(state);
+    if (verbose && (errorsRemoved > 0 || patternsRemoved > 0)) {
+      console.error(
+        `[ctxopt] Cleanup: removed ${errorsRemoved} errors, ${patternsRemoved} patterns`
+      );
+    }
+  };
+
+  // Run cleanup on process exit
+  process.on("beforeExit", cleanup);
+  process.on("SIGINT", () => {
+    cleanup();
+    process.exit(0);
+  });
+  process.on("SIGTERM", () => {
+    cleanup();
+    process.exit(0);
+  });
+}
+
+/**
  * Run the MCP server on stdio transport
  */
 export async function runServer(config: ServerConfig = {}): Promise<void> {
   const { server, state } = createServer(config);
+
+  // Setup cleanup hooks for graceful shutdown
+  setupCleanupHooks(state, config.verbose ?? false);
 
   const transport = new StdioServerTransport();
   await server.connect(transport);

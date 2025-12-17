@@ -3,7 +3,20 @@
  *
  * Maintains in-memory state for the duration of an MCP session.
  * State persists as long as the process runs and resets on IDE restart.
+ *
+ * Memory management:
+ * - Command history is limited to MAX_COMMAND_HISTORY entries (circular buffer)
+ * - Error cache and retry patterns have TTL-based cleanup
+ * - Cleanup runs periodically to prevent memory leaks in long sessions
  */
+
+// Memory management constants
+export const MAX_COMMAND_HISTORY = 1000;
+export const CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+export const CLEANUP_INTERVAL = 100; // Run cleanup every N commands
+
+// Track cleanup counter
+let cleanupCounter = 0;
 
 export interface CommandEntry {
   id: string;
@@ -107,10 +120,55 @@ export function addCommand(state: SessionState, entry: Omit<CommandEntry, "id">)
     ...entry,
     id: generateCommandId(),
   };
+
+  // Circular buffer: remove oldest entries if at capacity
+  if (state.commandHistory.length >= MAX_COMMAND_HISTORY) {
+    state.commandHistory = state.commandHistory.slice(-MAX_COMMAND_HISTORY + 1);
+  }
+
   state.commandHistory.push(command);
   state.tokensUsed += entry.tokensIn + entry.tokensOut;
   state.tokensSaved += entry.tokensSaved;
+
+  // Periodic cleanup of stale cache entries
+  cleanupCounter++;
+  if (cleanupCounter >= CLEANUP_INTERVAL) {
+    cleanupCounter = 0;
+    cleanupStaleEntries(state);
+  }
+
   return command;
+}
+
+/**
+ * Remove stale entries from error cache and retry patterns
+ * Entries older than CACHE_TTL_MS are removed
+ */
+export function cleanupStaleEntries(state: SessionState): {
+  errorsRemoved: number;
+  patternsRemoved: number;
+} {
+  const now = Date.now();
+  let errorsRemoved = 0;
+  let patternsRemoved = 0;
+
+  // Clean up error cache
+  for (const [hash, entry] of state.errorCache.entries()) {
+    if (now - entry.lastSeen.getTime() > CACHE_TTL_MS) {
+      state.errorCache.delete(hash);
+      errorsRemoved++;
+    }
+  }
+
+  // Clean up retry patterns
+  for (const [command, pattern] of state.retryPatterns.entries()) {
+    if (now - pattern.lastAttempt.getTime() > CACHE_TTL_MS) {
+      state.retryPatterns.delete(command);
+      patternsRemoved++;
+    }
+  }
+
+  return { errorsRemoved, patternsRemoved };
 }
 
 export function getRecentCommands(state: SessionState, count: number = 10): CommandEntry[] {

@@ -3,6 +3,8 @@
  *
  * Reads files intelligently using AST analysis to extract only
  * relevant portions (functions, classes, types) instead of full files.
+ *
+ * Security: Path sandboxing restricts file access to the working directory.
  */
 
 import * as fs from "fs/promises";
@@ -20,6 +22,59 @@ import {
 } from "../ast/index.js";
 import { detectLanguageFromPath } from "../utils/language-detector.js";
 import type { ToolDefinition } from "./registry.js";
+
+// Sensitive file patterns that should never be read
+const BLOCKED_PATTERNS = [
+  /\.env($|\.)/i, // .env files
+  /\.pem$/i, // Private keys
+  /\.key$/i, // Key files
+  /id_rsa/i, // SSH keys
+  /id_ed25519/i, // SSH keys
+  /credentials/i, // Credentials files
+  /secrets?\./i, // Secret files
+  /\.keystore$/i, // Java keystores
+];
+
+/**
+ * Validate that a file path is safe to read
+ * - Must be within the working directory (no directory traversal)
+ * - Must not match sensitive file patterns
+ */
+function validatePath(
+  filePath: string,
+  workingDir: string
+): { safe: boolean; error?: string; resolvedPath?: string } {
+  // Resolve to absolute path
+  const resolvedPath = path.isAbsolute(filePath)
+    ? path.normalize(filePath)
+    : path.resolve(workingDir, filePath);
+
+  // Normalize both paths for comparison
+  const normalizedResolved = path.normalize(resolvedPath);
+  const normalizedWorkingDir = path.normalize(workingDir);
+
+  // Check if resolved path is within working directory
+  if (!normalizedResolved.startsWith(normalizedWorkingDir + path.sep) &&
+      normalizedResolved !== normalizedWorkingDir) {
+    return {
+      safe: false,
+      error: `Access denied: Path '${filePath}' is outside the working directory. Only files within '${workingDir}' can be read.`,
+    };
+  }
+
+  // Check for blocked patterns
+  const basename = path.basename(resolvedPath);
+  for (const pattern of BLOCKED_PATTERNS) {
+    if (pattern.test(basename) || pattern.test(resolvedPath)) {
+      return {
+        safe: false,
+        error: `Access denied: Cannot read sensitive file '${basename}'. This file type is blocked for security reasons.`,
+      };
+    }
+  }
+
+  return { safe: true, resolvedPath };
+}
 
 export const smartFileReadSchema = {
   type: "object" as const,
@@ -194,11 +249,17 @@ export async function executeSmartFileRead(
   _state: SessionState
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
   const input = inputSchema.parse(args);
+  const workingDir = process.cwd();
 
-  // Resolve file path
-  const resolvedPath = path.isAbsolute(input.filePath)
-    ? input.filePath
-    : path.resolve(process.cwd(), input.filePath);
+  // Validate path for security (sandboxing)
+  const validation = validatePath(input.filePath, workingDir);
+  if (!validation.safe || !validation.resolvedPath) {
+    return {
+      content: [{ type: "text", text: validation.error || "Invalid path" }],
+    };
+  }
+
+  const resolvedPath = validation.resolvedPath;
 
   // Check if file exists
   try {

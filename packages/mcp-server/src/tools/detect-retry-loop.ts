@@ -70,31 +70,31 @@ function generateSuggestion(
 ): string {
   // High similarity with same errors = stuck in a loop
   if (similarity >= 90 && errorTrend.trend === "same") {
-    return "Les mmes erreurs se rptent. Analysez-les en dtail avant de ressayer. Utilisez analyze_build_output pour un rsum des erreurs.";
+    return "Same errors keep repeating. Analyze them in detail before retrying. Use analyze_build_output for an error summary.";
   }
 
   // Errors decreasing = making progress
   if (errorTrend.trend === "decreasing") {
-    return `Les erreurs diminuent (${errorTrend.firstCount} → ${errorTrend.lastCount}). Continuez les corrections une par une.`;
+    return `Errors are decreasing (${errorTrend.firstCount} → ${errorTrend.lastCount}). Continue fixing them one by one.`;
   }
 
   // Errors increasing = going wrong direction
   if (errorTrend.trend === "increasing") {
-    return `Les erreurs augmentent (${errorTrend.firstCount} → ${errorTrend.lastCount}). Revenez  un tat stable (git stash/reset) et reprenez.`;
+    return `Errors are increasing (${errorTrend.firstCount} → ${errorTrend.lastCount}). Revert to a stable state (git stash/reset) and start over.`;
   }
 
   // Fluctuating = unstable
   if (errorTrend.trend === "fluctuating") {
-    return "Les erreurs fluctuent. Prenez du recul et analysez la cause racine avant de continuer.";
+    return "Errors are fluctuating. Step back and analyze the root cause before continuing.";
   }
 
   // High occurrence count
   if (occurrences >= 5) {
-    return `Cette commande a t excute ${occurrences} fois. Arrtez et analysez le problme sous-jacent.`;
+    return `This command has been executed ${occurrences} times. Stop and analyze the underlying issue.`;
   }
 
   // Default
-  return "Prenez du recul et analysez la cause racine des erreurs avant de ressayer.";
+  return "Step back and analyze the root cause of errors before retrying.";
 }
 
 /**
@@ -104,21 +104,21 @@ function formatResult(result: DetectRetryLoopResult): string {
   const parts: string[] = [];
 
   if (result.loopDetected && result.details) {
-    parts.push("## Boucle de Retry Dtecte");
+    parts.push("## Retry Loop Detected");
     parts.push("");
-    parts.push(`**Commande:** \`${result.details.command}\``);
-    parts.push(`**Commande normalise:** \`${result.details.normalizedCommand}\``);
+    parts.push(`**Command:** \`${result.details.command}\``);
+    parts.push(`**Normalized command:** \`${result.details.normalizedCommand}\``);
     parts.push(`**Occurrences:** ${result.details.occurrences}`);
-    parts.push(`**Priode:** ${result.details.timespan}`);
-    parts.push(`**Similarit des outputs:** ${result.details.similarity}%`);
+    parts.push(`**Time span:** ${result.details.timespan}`);
+    parts.push(`**Output similarity:** ${result.details.similarity}%`);
     parts.push("");
 
     // Error trend
     if (result.details.errorTrend.errorCounts.length > 0) {
-      parts.push("### Tendance des Erreurs");
+      parts.push("### Error Trend");
       parts.push(`- **Trend:** ${result.details.errorTrend.trend}`);
-      parts.push(`- **Premire excution:** ${result.details.errorTrend.firstCount} erreur(s)`);
-      parts.push(`- **Dernire excution:** ${result.details.errorTrend.lastCount} erreur(s)`);
+      parts.push(`- **First execution:** ${result.details.errorTrend.firstCount} error(s)`);
+      parts.push(`- **Last execution:** ${result.details.errorTrend.lastCount} error(s)`);
       parts.push(`- **Delta:** ${result.details.errorTrend.delta > 0 ? "+" : ""}${result.details.errorTrend.delta}`);
       parts.push("");
     }
@@ -130,11 +130,11 @@ function formatResult(result: DetectRetryLoopResult): string {
       parts.push("");
     }
   } else {
-    parts.push("## Aucune Boucle Dtecte");
+    parts.push("## No Loop Detected");
     parts.push("");
     if (result.isCommonRetryCommand) {
       parts.push(
-        "*Cette commande est souvent source de boucles de retry. Surveillez les erreurs rptes.*"
+        "*This command is often a source of retry loops. Watch for repeated errors.*"
       );
       parts.push("");
     }
@@ -142,7 +142,7 @@ function formatResult(result: DetectRetryLoopResult): string {
 
   // Recent commands
   if (result.recentCommands.length > 0) {
-    parts.push("### Commandes Rcentes");
+    parts.push("### Recent Commands");
     result.recentCommands.forEach((cmd, i) => {
       parts.push(`${i + 1}. \`${cmd}\``);
     });

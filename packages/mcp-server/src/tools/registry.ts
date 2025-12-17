@@ -7,7 +7,7 @@
 import type { SessionState } from "../state/session.js";
 import type { ToolContext, ToolResult } from "../middleware/types.js";
 import type { MiddlewareChain } from "../middleware/chain.js";
-import { encodingForModel } from "js-tiktoken";
+import { countTokens } from "../utils/token-counter.js";
 
 export interface ToolDefinition {
   name: string;
@@ -24,7 +24,6 @@ export interface ToolExecuteResult {
 export class ToolRegistry {
   private tools: Map<string, ToolDefinition> = new Map();
   private middlewareChain: MiddlewareChain | null = null;
-  private encoding = encodingForModel("gpt-4");
 
   /**
    * Set the middleware chain to use for tool execution
@@ -78,13 +77,6 @@ export class ToolRegistry {
   }
 
   /**
-   * Count tokens in a string
-   */
-  private countTokens(text: string): number {
-    return this.encoding.encode(text).length;
-  }
-
-  /**
    * Execute a tool with middleware chain
    */
   async execute(name: string, args: unknown, state: SessionState): Promise<ToolResult> {
@@ -101,17 +93,18 @@ export class ToolRegistry {
       };
     }
 
-    // Count input tokens
+    // Count input tokens using centralized counter
     const inputText = JSON.stringify(args);
-    const tokensIn = this.countTokens(inputText);
+    const tokensIn = countTokens(inputText);
 
-    // Create tool context
+    // Create tool context with error tracking
     const ctx: ToolContext = {
       toolName: name,
       arguments: args as Record<string, unknown>,
       state,
       startTime: Date.now(),
       metadata: {},
+      middlewareErrors: [],
     };
 
     try {
@@ -136,9 +129,9 @@ export class ToolRegistry {
       // Execute tool
       const executeResult = await tool.execute(currentCtx.arguments, state);
 
-      // Count output tokens
+      // Count output tokens using centralized counter
       const outputText = executeResult.content.map((c) => c.text).join("\n");
-      const tokensOut = this.countTokens(outputText);
+      const tokensOut = countTokens(outputText);
 
       // Create result
       let result: ToolResult = {
@@ -182,16 +175,9 @@ export class ToolRegistry {
   }
 }
 
-// Singleton instance
-let defaultRegistry: ToolRegistry | null = null;
-
-export function getToolRegistry(): ToolRegistry {
-  if (!defaultRegistry) {
-    defaultRegistry = new ToolRegistry();
-  }
-  return defaultRegistry;
-}
-
+/**
+ * Create a new tool registry instance
+ */
 export function createToolRegistry(): ToolRegistry {
   return new ToolRegistry();
 }
