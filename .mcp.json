@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "ctxopt": {
+      "command": "bun",
+      "args": [
+        "/home/sauron/code/ctxopt/packages/mcp-server/bin/cli.js",
+        "serve",
+        "--verbose"
+      ]
+    }
+  }
+}
