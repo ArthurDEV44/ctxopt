@@ -21,7 +21,7 @@ export default function MarketingLayout({
               Pricing
             </Link>
             <Link
-              href="https://docs.ctxopt.dev"
+              href="/docs"
               className="text-sm font-medium text-muted-foreground hover:text-foreground"
             >
               Docs

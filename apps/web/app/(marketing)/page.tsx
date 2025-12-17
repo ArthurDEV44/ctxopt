@@ -29,7 +29,7 @@ export default function HomePage() {
             Start Free
           </Link>
           <Link
-            href="https://docs.ctxopt.dev"
+            href="/docs"
             className="inline-flex h-12 items-center justify-center rounded-md border px-8 text-lg font-medium hover:bg-muted"
           >
             View Docs
