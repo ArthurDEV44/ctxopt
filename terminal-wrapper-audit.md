@@ -2,9 +2,11 @@
 
 ## Executive Summary
 
-Ce document analyse la faisabilité de créer un **environnement terminal wrapper** pour Claude Code, une alternative au système MCP actuel. L'objectif est d'optimiser nativement la consommation de tokens en encapsulant l'exécution de Claude Code plutôt qu'en utilisant des outils MCP optionnels.
+Ce document analyse la faisabilité de créer un **environnement terminal wrapper** pour Claude Code. L'objectif est d'améliorer l'expérience utilisateur en encapsulant l'exécution de Claude Code dans un environnement qui facilite l'optimisation des tokens.
 
-**Concept principal**: Au lieu de `claude`, l'utilisateur exécute `ctxopt` qui lance Claude Code dans un environnement contrôlé où l'optimisation des tokens est **automatique et transparente**.
+**Concept principal**: Au lieu de `claude`, l'utilisateur exécute `ctxopt` qui lance Claude Code dans un PTY contrôlé, permettant l'analyse de sortie, l'injection de suggestions, et l'affichage de statistiques en temps réel.
+
+**Approche retenue**: PTY Wrapper en Rust avec napi-rs pour distribution NPM cross-platform.
 
 ---
 
@@ -16,8 +18,8 @@ Ce document analyse la faisabilité de créer un **environnement terminal wrappe
 |----------|--------|
 | **Appels optionnels** | Les outils MCP doivent être explicitement appelés par Claude |
 | **Dépendance au modèle** | Claude "oublie" parfois d'utiliser les outils MCP |
-| **Hooks limités** | Les hooks ne peuvent qu'ajouter du contexte, pas modifier les requêtes |
-| **Pas d'interception** | Impossible d'intercepter/modifier les réponses API |
+| **Hooks limités** | Les hooks ne peuvent qu'ajouter du contexte, pas forcer l'utilisation |
+| **Pas de feedback visuel** | L'utilisateur ne voit pas les économies de tokens en temps réel |
 
 ### Comportement actuel
 ```
@@ -26,11 +28,14 @@ User → Claude Code CLI → API Anthropic
     MCP Tools (optionnels, appelés par Claude)
 ```
 
-### Comportement souhaité
+### Comportement avec CtxOpt
 ```
-User → CtxOpt Wrapper → Claude Code CLI → [Interception] → API Anthropic
-                                              ↓
-                              Optimisation automatique des tokens
+User → CtxOpt Wrapper (PTY) → Claude Code CLI → API Anthropic
+              ↓
+    • Analyse stdout en temps réel
+    • Injection de suggestions
+    • Statistiques de tokens
+    • Configuration automatique des hooks
 ```
 
 ---
@@ -50,7 +55,7 @@ User → CtxOpt Wrapper → Claude Code CLI → [Interception] → API Anthropic
 ### Implications pour le wrapper
 - Claude Code est un **processus Node.js/Bun** standard
 - Communication API via **HTTPS avec SSE** (pas WebSocket)
-- Possible d'intercepter via PTY ou proxy HTTP
+- Peut être exécuté dans un PTY pour intercepter stdin/stdout
 
 ---
 
@@ -75,78 +80,16 @@ stdin/stdout interceptés
 - Cross-platform (portable-pty supporte Windows/Linux/macOS)
 - Pas besoin de modifier Claude Code
 - Peut injecter des commandes/contexte
-
-**Limitations**:
-- Ne peut pas intercepter les requêtes HTTP directement
-- Optimisation limitée au niveau terminal (pas API)
+- Haute fiabilité et maintenance facile
+- Excellente expérience utilisateur
+- Sécurité préservée (pas de manipulation TLS)
 
 **Technologies**:
 - [portable-pty](https://crates.io/crates/portable-pty) - PTY cross-platform en Rust
 - [napi-rs](https://napi.rs/) - Bindings Rust → Node.js
 - [get-pty-output](https://www.npmjs.com/package/get-pty-output) - NPM package existant
 
-### 3.2 Transparent Proxy HTTP
-
-**Concept**: Intercepter les requêtes HTTPS vers l'API Anthropic.
-
-```
-ctxopt
-   ↓
-Configure HTTP_PROXY, HTTPS_PROXY
-   ↓
-claude (utilise le proxy)
-   ↓
-Proxy mitmproxy/custom
-   ↓
-Modification des requêtes/réponses
-   ↓
-api.anthropic.com
-```
-
-**Avantages**:
-- Interception complète des requêtes API
-- Peut modifier les prompts avant envoi
-- Peut compresser les réponses
-- Contrôle total sur les tokens
-
-**Limitations**:
-- Nécessite gestion des certificats TLS (complexe)
-- mitmproxy n'est pas facilement embeddable
-- Problèmes de confiance/sécurité
-- Claude Code pourrait refuser le certificat
-
-**Technologies**:
-- [mitmproxy](https://mitmproxy.org/) - Proxy HTTP transparent
-- Variables d'environnement: `HTTP_PROXY`, `HTTPS_PROXY`, `NODE_EXTRA_CA_CERTS`
-
-### 3.3 Hybrid: PTY + API Monkey-Patching
-
-**Concept**: Wrapper PTY qui injecte du code pour intercepter les appels API.
-
-```
-ctxopt
-   ↓
-PTY wrapper
-   ↓
-Injection via NODE_OPTIONS="--require=./interceptor.js"
-   ↓
-claude
-   ↓
-fetch/http interceptés en mémoire
-```
-
-**Avantages**:
-- Pas besoin de proxy externe
-- Interception au niveau process
-- Pas de problème TLS
-
-**Limitations**:
-- Fragile (dépend de l'implémentation interne)
-- Peut casser avec les updates de Claude Code
-- Complexe à maintenir
-- Potentiellement bloqué par Bun
-
-### 3.4 Fork/Patch de Claude Code
+### 3.2 Fork/Patch de Claude Code
 
 **Concept**: Maintenir un fork modifié de Claude Code.
 
@@ -223,15 +166,16 @@ Référence: [Sentry CLI publishing strategy](https://sentry.engineering/blog/pu
 
 ## 6. Comparaison des Approches
 
-| Critère | PTY Wrapper | HTTP Proxy | Hybrid | Fork |
-|---------|-------------|------------|--------|------|
-| **Complexité** | Moyenne | Haute | Très haute | Impossible |
-| **Fiabilité** | Haute | Moyenne | Basse | N/A |
-| **Interception API** | Non | Oui | Oui | N/A |
-| **Cross-platform** | Oui | Oui | Partiel | N/A |
-| **Maintenance** | Facile | Moyenne | Difficile | N/A |
-| **User experience** | Excellente | Moyenne | Bonne | N/A |
-| **Sécurité** | Haute | Basse (TLS) | Moyenne | N/A |
+| Critère | PTY Wrapper | Fork |
+|---------|-------------|------|
+| **Complexité** | Moyenne | Impossible |
+| **Fiabilité** | Haute | N/A |
+| **Cross-platform** | Oui | N/A |
+| **Maintenance** | Facile | N/A |
+| **User experience** | Excellente | N/A |
+| **Sécurité** | Haute | N/A |
+
+**Conclusion**: L'approche PTY Wrapper est clairement la seule option viable.
 
 ---
 
@@ -259,9 +203,8 @@ Créer un wrapper PTY en Rust qui:
 
 ### Limitations acceptées
 
-- **Pas d'interception API directe** (trop complexe/fragile)
 - **Optimisation "assistée"** plutôt que "forcée"
-- **Dépend de la coopération du modèle**
+- **Dépend de la coopération du modèle** pour utiliser les outils MCP suggérés
 
 ---
 
@@ -330,11 +273,10 @@ napi-derive = "2"
 
 | Risque | Probabilité | Impact | Mitigation |
 |--------|-------------|--------|------------|
-| Claude Code change l'API interne | Haute | Moyen | Tests automatisés, fallback gracieux |
-| PTY bugs cross-platform | Moyenne | Haut | Utiliser portable-pty mature |
+| Claude Code change les patterns de sortie | Moyenne | Moyen | Regex flexibles, tests automatisés, fallback gracieux |
+| PTY bugs cross-platform | Basse | Moyen | portable-pty est mature et testé (wezterm) |
 | User confusion | Moyenne | Moyen | Documentation claire, mode verbose |
 | Performance overhead | Basse | Faible | Rust natif, async I/O |
-| Rate limit bypass non-fonctionnel | Haute | Haut | Gérer les attentes, focus sur UX |
 
 ---
 
@@ -362,17 +304,14 @@ napi-derive = "2"
 
 ## 11. Questions Ouvertes
 
-1. **Niveau d'interception souhaité?**
-   - Terminal seulement (PTY) vs API (proxy)
-
-2. **Comportement si Claude Code update?**
+1. **Comportement si Claude Code update?**
    - Fallback gracieux vs bloquer
 
-3. **Monétisation/SaaS?**
+2. **Monétisation/SaaS?**
    - Stats cloud vs local-only
 
-4. **Support Windows prioritaire?**
-   - Affecte la complexité PTY
+3. **Support Windows prioritaire?**
+   - Affecte les tests cross-platform
 
 ---
 
@@ -380,26 +319,27 @@ napi-derive = "2"
 
 ### Recommandation
 
-L'approche **PTY Wrapper en Rust** est la plus viable:
+L'approche **PTY Wrapper en Rust** est la seule approche viable:
 
-- **Faisable** avec les technologies existantes
-- **Maintenable** car n'intercepte pas les internals
-- **Utile** malgré les limitations (pas d'interception API)
-- **Distribuable** via NPM avec binaires précompilés
+- **Faisable** avec les technologies existantes (portable-pty, napi-rs)
+- **Maintenable** car n'intercepte pas les internals de Claude Code
+- **Fiable** grâce à l'utilisation de composants matures
+- **Distribuable** via NPM avec binaires précompilés cross-platform
+- **Sécurisé** sans manipulation de certificats TLS
 
-### Limitation majeure
+### Mode opératoire
 
-Sans interception API, l'optimisation reste **assistée** et non **forcée**. Le wrapper peut suggérer et injecter du contexte, mais ne peut pas:
-- Modifier les requêtes API avant envoi
-- Compresser les prompts automatiquement
-- Garantir une réduction de tokens
+L'optimisation est **assistée** par injection de contexte et suggestions. Le wrapper:
+- Analyse les patterns de sortie (erreurs build, logs volumineux)
+- Injecte des suggestions d'utilisation des outils MCP
+- Configure automatiquement les hooks Claude Code
+- Affiche des statistiques de tokens en temps réel
 
-### Alternative à considérer
+### Évolution future
 
-Si l'interception API est critique, la seule option réaliste serait de:
-1. Contacter Anthropic pour un partenariat
-2. Proposer l'intégration de ctxopt dans Claude Code nativement
-3. Créer une extension officielle via leur programme de plugins
+Pour une intégration plus profonde, contacter Anthropic:
+1. Proposer l'intégration native de ctxopt dans Claude Code
+2. Créer une extension officielle via leur programme de plugins
 
 ---
 
@@ -1041,7 +981,7 @@ jobs:
 | stdin async bloquant | Peut bloquer le read loop | Thread dédié pour stdin |
 | ConPTY Windows quirks | Comportement différent Linux | Tests spécifiques Windows |
 | ANSI escape sequences | Parsing complexe | Utiliser `strip-ansi` ou parser minimal |
-| Token estimation | Approximatif sans accès API | Utiliser tiktoken-rs pour meilleure estimation |
+| Token estimation | Approximatif (basé sur output) | Utiliser tiktoken-rs pour estimation précise |
 | Claude Code updates | Peut casser les patterns | Patterns regex flexibles + fallback |
 
 ### 13.12 Métriques de succès
@@ -1079,7 +1019,3 @@ jobs:
 - [Sentry CLI npm publishing](https://sentry.engineering/blog/publishing-binaries-on-npm) - Strategy de distribution
 - [Packaging Rust for NPM](https://blog.orhun.dev/packaging-rust-for-npm/) - Guide complet
 
-### Interception & Proxy (Référence)
-- [mitmproxy](https://mitmproxy.org/) - Proxy HTTP transparent
-- [Proxying CLI Tools](https://blog.ropnop.com/proxying-cli-tools/) - Techniques d'interception
-- [HTTP Toolkit Docker](https://httptoolkit.com/docs/guides/docker/) - Environment variables method
