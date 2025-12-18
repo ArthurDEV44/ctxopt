@@ -74,7 +74,7 @@
 
 - [x] [P01 - PTY Core](./P01-pty-core.md) - PtyManager avec portable-pty, spawn/read/write
 - [x] [P02 - Stream Analyzer](./P02-stream-analyzer.md) - Analyse patterns stdout, ContentType enum
-- [ ] [P03 - Context Injector](./P03-context-injector.md) - Injection suggestions via stdin
+- [x] [P03 - Context Injector](./P03-context-injector.md) - Injection suggestions via stdin
 
 ## Phase 2: Node.js Integration
 

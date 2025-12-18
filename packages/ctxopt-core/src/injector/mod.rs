@@ -6,4 +6,5 @@
 pub mod templates;
 pub mod triggers;
 
+pub use templates::{Suggestion, SuggestionType};
 pub use triggers::ContextInjector;
