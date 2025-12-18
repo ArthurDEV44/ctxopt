@@ -68,11 +68,11 @@
 
 ## Phase 0: Project Setup (Priorité Critique)
 
-- [ ] [P00 - Project Setup](./P00-project-setup.md) - Structure Rust + napi-rs + monorepo packages
+- [x] [P00 - Project Setup](./P00-project-setup.md) - Structure Rust + napi-rs + monorepo packages
 
 ## Phase 1: PTY Core (Priorité Haute)
 
-- [ ] [P01 - PTY Core](./P01-pty-core.md) - PtyManager avec portable-pty, spawn/read/write
+- [x] [P01 - PTY Core](./P01-pty-core.md) - PtyManager avec portable-pty, spawn/read/write
 - [ ] [P02 - Stream Analyzer](./P02-stream-analyzer.md) - Analyse patterns stdout, ContentType enum
 - [ ] [P03 - Context Injector](./P03-context-injector.md) - Injection suggestions via stdin
 

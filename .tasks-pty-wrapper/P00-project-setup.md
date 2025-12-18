@@ -378,18 +378,18 @@ rustflags = []
 
 ## Tâches
 
-- [ ] Créer le dossier `packages/ctxopt-core/`
-- [ ] Initialiser Cargo.toml avec toutes les dépendances
-- [ ] Créer build.rs pour napi-build
-- [ ] Créer src/lib.rs avec exports initiaux
-- [ ] Créer les modules stubs (pty, stream, injector, tokens, config)
-- [ ] Créer package.json pour napi build
-- [ ] Créer le dossier `packages/ctxopt-cli/`
-- [ ] Initialiser package.json avec bin entry
-- [ ] Créer tsconfig.json
-- [ ] Créer .cargo/config.toml pour cross-compilation
-- [ ] Vérifier `cargo build` compile sans erreur
-- [ ] Vérifier `bun run build` génère le .node file
+- [x] Créer le dossier `packages/ctxopt-core/`
+- [x] Initialiser Cargo.toml avec toutes les dépendances
+- [x] Créer build.rs pour napi-build
+- [x] Créer src/lib.rs avec exports initiaux
+- [x] Créer les modules stubs (pty, stream, injector, tokens, config)
+- [x] Créer package.json pour napi build
+- [x] Créer le dossier `packages/ctxopt-cli/`
+- [x] Initialiser package.json avec bin entry
+- [x] Créer tsconfig.json
+- [x] Créer .cargo/config.toml pour cross-compilation
+- [x] Vérifier `cargo build` compile sans erreur
+- [x] Vérifier `bun run build` génère le .node file
 
 ---
 

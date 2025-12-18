@@ -1,0 +1,53 @@
+{
+  "name": "@ctxopt/cli",
+  "version": "0.1.0",
+  "description": "Terminal wrapper for Claude Code with automatic token optimization",
+  "type": "module",
+  "bin": {
+    "ctxopt": "./bin/ctxopt"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm --dts",
+    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "start": "node dist/index.js",
+    "check-types": "tsc --noEmit",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@ctxopt/core": "workspace:*",
+    "commander": "^12.0.0"
+  },
+  "devDependencies": {
+    "@repo/eslint-config": "workspace:*",
+    "@repo/typescript-config": "workspace:*",
+    "@types/node": "^20.0.0",
+    "tsup": "^8.0.0",
+    "typescript": "5.9.2"
+  },
+  "optionalDependencies": {
+    "@ctxopt/cli-darwin-x64": "0.1.0",
+    "@ctxopt/cli-darwin-arm64": "0.1.0",
+    "@ctxopt/cli-linux-x64-gnu": "0.1.0",
+    "@ctxopt/cli-linux-arm64-gnu": "0.1.0",
+    "@ctxopt/cli-win32-x64-msvc": "0.1.0",
+    "@ctxopt/cli-win32-arm64-msvc": "0.1.0"
+  },
+  "engines": {
+    "node": ">= 18"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "files": [
+    "dist",
+    "bin"
+  ]
+}

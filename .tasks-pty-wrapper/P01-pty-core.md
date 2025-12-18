@@ -409,16 +409,16 @@ impl PtyManager {
 
 ## Tâches
 
-- [ ] Créer `src/pty/mod.rs` avec les exports
-- [ ] Créer `src/pty/manager.rs` avec `PtyManager`
-- [ ] Implémenter `new()` avec portable-pty
-- [ ] Implémenter `read()` (sync pour l'instant)
-- [ ] Implémenter `write()` et `write_str()`
-- [ ] Implémenter `is_running()` et `wait()`
-- [ ] Implémenter `resize()`
-- [ ] Implémenter `kill()` (platform-specific)
-- [ ] Ajouter `read_async()` avec spawn_blocking
-- [ ] Écrire tests unitaires
+- [x] Créer `src/pty/mod.rs` avec les exports
+- [x] Créer `src/pty/manager.rs` avec `PtyManager`
+- [x] Implémenter `new()` avec portable-pty
+- [x] Implémenter `read()` (sync pour l'instant)
+- [x] Implémenter `write()` et `write_str()`
+- [x] Implémenter `is_running()` et `wait()`
+- [x] Implémenter `resize()`
+- [x] Implémenter `kill()` (platform-specific)
+- [x] Ajouter `read_async()` avec spawn_blocking
+- [x] Écrire tests unitaires
 - [ ] Tester manuellement avec `claude` (si installé)
 
 ---
