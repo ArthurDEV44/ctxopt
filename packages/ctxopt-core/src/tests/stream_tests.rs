@@ -104,10 +104,10 @@ fn test_detect_file_read() {
 
 #[test]
 fn test_strip_ansi_codes() {
-    let analyzer = StreamAnalyzer::new();
+    use crate::stream::PATTERNS;
 
     let with_ansi = "\x1b[31mError:\x1b[0m Something failed";
-    let clean = analyzer.strip_ansi(with_ansi);
+    let clean = PATTERNS.ansi_escape.replace_all(with_ansi, "").to_string();
 
     assert_eq!(clean, "Error: Something failed");
     assert!(!clean.contains("\x1b"), "Should not contain ANSI codes");
@@ -115,10 +115,10 @@ fn test_strip_ansi_codes() {
 
 #[test]
 fn test_strip_ansi_complex() {
-    let analyzer = StreamAnalyzer::new();
+    use crate::stream::PATTERNS;
 
     let complex = "\x1b[1;31;40mBold Red on Black\x1b[0m \x1b[4mUnderline\x1b[24m";
-    let clean = analyzer.strip_ansi(complex);
+    let clean = PATTERNS.ansi_escape.replace_all(complex, "").to_string();
 
     assert_eq!(clean, "Bold Red on Black Underline");
 }

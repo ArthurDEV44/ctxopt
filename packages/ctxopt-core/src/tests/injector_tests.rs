@@ -28,12 +28,12 @@ fn test_should_inject_build_errors_threshold() {
 fn test_should_inject_large_output() {
     let injector = ContextInjector::new();
 
-    // Output < 5KB: pas d'injection
-    let small = ContentType::LargeOutput { size: 1000 };
+    // Output <= 10KB: pas d'injection
+    let small = ContentType::LargeOutput { size: 5000 };
     assert!(!injector.should_inject(&small), "Should not inject for small output");
 
-    // Output >= 5KB: injection
-    let large = ContentType::LargeOutput { size: 10000 };
+    // Output > 10KB: injection
+    let large = ContentType::LargeOutput { size: 15000 };
     assert!(injector.should_inject(&large), "Should inject for large output");
 }
 
@@ -108,14 +108,14 @@ fn test_suggestion_large_output_format() {
     let suggestion = Suggestion::large_output(50000);
 
     assert_eq!(suggestion.suggestion_type, SuggestionType::LargeOutput);
-    assert!(suggestion.display_message.contains("auto_optimize") ||
-            suggestion.display_message.contains("large"),
+    assert!(suggestion.display_message.contains("compress_context") ||
+            suggestion.display_message.contains("Large"),
             "Should mention optimization");
 }
 
 #[test]
 fn test_suggestion_file_read_format() {
-    let suggestion = Suggestion::file_read("src/main.ts".to_string());
+    let suggestion = Suggestion::file_read("src/main.ts");
 
     assert_eq!(suggestion.suggestion_type, SuggestionType::FileRead);
     assert!(suggestion.display_message.contains("smart_file_read") ||
