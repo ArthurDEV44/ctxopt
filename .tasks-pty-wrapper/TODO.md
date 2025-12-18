@@ -80,7 +80,7 @@
 
 - [x] [P04 - NAPI Bindings](./P04-napi-bindings.md) - Bindings Rust → Node.js avec napi-rs
 - [x] [P05 - NPM Distribution](./P05-npm-distribution.md) - CI/CD GitHub Actions, packages platform-specific
-- [ ] [P06 - CLI Wrapper](./P06-cli-wrapper.md) - Entry point TypeScript, pipe stdin/stdout
+- [x] [P06 - CLI Wrapper](./P06-cli-wrapper.md) - Entry point TypeScript, pipe stdin/stdout
 
 ## Phase 3: Integration & Polish
 

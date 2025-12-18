@@ -2,21 +2,14 @@
   "name": "@ctxopt/cli",
   "version": "0.1.0",
   "description": "Terminal wrapper for Claude Code with automatic token optimization",
-  "type": "module",
   "bin": {
     "ctxopt": "./bin/ctxopt"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    }
-  },
   "scripts": {
-    "build": "tsup src/index.ts --format esm --dts",
-    "dev": "tsup src/index.ts --format esm --dts --watch",
+    "build": "tsup src/index.ts --format cjs --dts --clean",
+    "dev": "tsup src/index.ts --format cjs --dts --watch",
     "start": "node dist/index.js",
     "check-types": "tsc --noEmit",
     "lint": "eslint ."
