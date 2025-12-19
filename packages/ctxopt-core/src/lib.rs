@@ -3,7 +3,7 @@
 use napi::bindgen_prelude::*;
 use napi_derive::napi;
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{Mutex, RwLock};
 
 mod config;
 mod injector;
@@ -78,11 +78,11 @@ pub struct CtxOptSession {
     /// Gestionnaire PTY
     pty: Arc<Mutex<PtyManager>>,
 
-    /// Analyseur de flux
-    analyzer: Arc<Mutex<StreamAnalyzer>>,
+    /// Analyseur de flux (RwLock pour permettre reads concurrents sur stats)
+    analyzer: Arc<RwLock<StreamAnalyzer>>,
 
-    /// Injecteur de contexte (pour suggestions basées sur l'output)
-    injector: Arc<Mutex<ContextInjector>>,
+    /// Injecteur de contexte (RwLock pour permettre reads concurrents sur stats)
+    injector: Arc<RwLock<ContextInjector>>,
 
     /// Configuration
     config: Config,
@@ -113,8 +113,8 @@ impl CtxOptSession {
 
         Ok(Self {
             pty: Arc::new(Mutex::new(pty)),
-            analyzer: Arc::new(Mutex::new(StreamAnalyzer::new())),
-            injector: Arc::new(Mutex::new(ContextInjector::new())),
+            analyzer: Arc::new(RwLock::new(StreamAnalyzer::new())),
+            injector: Arc::new(RwLock::new(ContextInjector::new())),
             config: Config::default(),
             started_at: std::time::Instant::now(),
         })
@@ -147,11 +147,13 @@ impl CtxOptSession {
     /// Retourne l'output brut (avec ANSI), l'output nettoyé, les suggestions et les statistiques.
     #[napi]
     pub async fn read(&self) -> Result<ReadResult> {
-        let pty = self.pty.lock().await;
-        let output_bytes = pty
-            .read_async()
-            .await
-            .map_err(|e| Error::from_reason(format!("Read error: {}", e)))?;
+        // Scope 1: PTY lock seulement pour la lecture
+        let output_bytes = {
+            let pty = self.pty.lock().await;
+            pty.read_async()
+                .await
+                .map_err(|e| Error::from_reason(format!("Read error: {}", e)))?
+        }; // Lock PTY libéré ici
 
         // Conversion en string - garde l'output brut avec ANSI
         let raw_output = String::from_utf8_lossy(&output_bytes).to_string();
@@ -167,21 +169,24 @@ impl CtxOptSession {
             });
         }
 
-        // Analyse (utilise le texte pour détecter patterns et estimer tokens)
-        let mut analyzer = self.analyzer.lock().await;
-        let analysis = analyzer.analyze(&raw_output);
+        // Scope 2: Analyzer write lock seulement pour l'analyse
+        let analysis = {
+            let mut analyzer = self.analyzer.write().await;
+            analyzer.analyze(&raw_output)
+        }; // Lock analyzer libéré ici
 
-        // Génération de suggestions
-        let mut suggestions = Vec::new();
-        let mut injector = self.injector.lock().await;
-
-        if self.config.suggestions_enabled {
-            for content_type in &analysis.content_types {
-                if let Some(suggestion) = injector.generate_suggestion(content_type) {
-                    suggestions.push(suggestion.format_for_display());
-                }
-            }
-        }
+        // Scope 3: Injector write lock seulement pour les suggestions
+        let suggestions = if self.config.suggestions_enabled {
+            let mut injector = self.injector.write().await;
+            analysis
+                .content_types
+                .iter()
+                .filter_map(|ct| injector.generate_suggestion(ct))
+                .map(|s| s.format_for_display())
+                .collect()
+        } else {
+            Vec::new()
+        }; // Lock injector libéré ici
 
         // Types détectés en string
         let detected_types: Vec<String> = analysis
@@ -258,8 +263,9 @@ impl CtxOptSession {
     /// Retourne les statistiques de session
     #[napi]
     pub async fn stats(&self) -> SessionStats {
-        let analyzer = self.analyzer.lock().await;
-        let injector = self.injector.lock().await;
+        // Read locks - peuvent être acquis en parallèle avec d'autres reads
+        let analyzer = self.analyzer.read().await;
+        let injector = self.injector.read().await;
 
         SessionStats {
             total_tokens: analyzer.total_tokens() as u32,
@@ -272,15 +278,16 @@ impl CtxOptSession {
     /// Active/désactive les suggestions
     #[napi]
     pub async fn set_suggestions_enabled(&self, enabled: bool) {
-        let mut injector = self.injector.lock().await;
+        let mut injector = self.injector.write().await;
         injector.set_enabled(enabled);
     }
 
     /// Reset les compteurs de session
     #[napi]
     pub async fn reset_stats(&self) {
-        let mut analyzer = self.analyzer.lock().await;
-        let mut injector = self.injector.lock().await;
+        // Write locks - ordre constant: analyzer puis injector
+        let mut analyzer = self.analyzer.write().await;
+        let mut injector = self.injector.write().await;
         analyzer.reset();
         injector.reset();
     }

@@ -49,7 +49,7 @@ packages/ctxopt-core/src/
 
 ## Phase 2: Concurrency Optimization (Priorité: Haute)
 
-- [ ] [O02 - Lock Optimization](./O02-lock-optimization.md) - Optimiser Arc<Mutex<T>> pattern
+- [x] [O02 - Lock Optimization](./O02-lock-optimization.md) - Optimiser Arc<Mutex<T>> pattern
 
 ---
 
