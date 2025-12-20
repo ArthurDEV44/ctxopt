@@ -64,7 +64,7 @@ impl RingBuffer {
 
     /// Retourne la capacité maximale (utilisé dans les tests)
     #[allow(dead_code)]
-    pub fn capacity(&self) -> usize {
+    pub const fn capacity(&self) -> usize {
         self.capacity
     }
 }

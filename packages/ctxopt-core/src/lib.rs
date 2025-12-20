@@ -1,5 +1,17 @@
+// Clippy lints - strict mode for idiomatic Rust
 #![deny(clippy::all)]
-#![warn(missing_docs)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+
+// Pedantic exceptions - justified for NAPI bindings
+#![allow(clippy::module_name_repetitions)] // PtyManager in pty module is acceptable
+#![allow(clippy::must_use_candidate)] // Not relevant for NAPI-exported functions
+#![allow(clippy::missing_errors_doc)] // Error docs are contextual, not always needed
+#![allow(clippy::missing_panics_doc)] // Panics are documented where they matter
+
+// Documentation - allow missing docs for NAPI-generated code
+// NAPI macro generates internal functions that can't be documented
+#![allow(missing_docs)]
 
 //! ctxopt-core: Native PTY wrapper for Claude Code optimization
 //!
@@ -79,16 +91,15 @@ pub struct SessionStats {
 }
 
 /// Session PTY principale exposée à Node.js
-#[allow(missing_docs)] // Supprime warnings pour les types générés par napi macro
 #[napi]
 pub struct CtxOptSession {
     /// Gestionnaire PTY
     pty: Arc<Mutex<PtyManager>>,
 
-    /// Analyseur de flux (RwLock pour permettre reads concurrents sur stats)
+    /// Analyseur de flux (`RwLock` pour permettre reads concurrents sur stats)
     analyzer: Arc<RwLock<StreamAnalyzer>>,
 
-    /// Injecteur de contexte (RwLock pour permettre reads concurrents sur stats)
+    /// Injecteur de contexte (`RwLock` pour permettre reads concurrents sur stats)
     injector: Arc<RwLock<ContextInjector>>,
 
     /// Configuration
@@ -107,6 +118,7 @@ impl CtxOptSession {
     /// * `cols` - Nombre de colonnes du terminal (défaut: 80)
     /// * `command` - Commande à exécuter (défaut: "claude")
     #[napi(constructor)]
+    #[allow(clippy::cast_possible_truncation)] // Terminal size values are always < u16::MAX
     pub fn new(rows: Option<u32>, cols: Option<u32>, command: Option<String>) -> Result<Self> {
         let size = PtySize {
             rows: rows.unwrap_or(24) as u16,
@@ -138,7 +150,7 @@ impl CtxOptSession {
         let mut session = Self::new(rows, cols, command)?;
 
         if let Some(interval) = injection_interval_ms {
-            session.config.injection_interval_ms = interval as u64;
+            session.config.injection_interval_ms = u64::from(interval);
         }
 
         if let Some(enabled) = suggestions_enabled {
@@ -196,9 +208,10 @@ impl CtxOptSession {
         let detected_types: Vec<String> = analysis
             .content_types
             .iter()
-            .map(|ct| format!("{:?}", ct))
+            .map(|ct| format!("{ct:?}"))
             .collect();
 
+        #[allow(clippy::cast_possible_truncation)] // Values bounded by buffer size
         Ok(ReadResult {
             output: raw_output,              // Output brut avec ANSI pour affichage
             clean_output: analysis.clean_text, // Output nettoyé pour analyse
@@ -239,6 +252,7 @@ impl CtxOptSession {
 
     /// Redimensionne le PTY
     #[napi]
+    #[allow(clippy::cast_possible_truncation)] // Terminal size values are always < u16::MAX
     pub async fn resize(&self, rows: u32, cols: u32) -> Result<()> {
         let pty = self.pty.lock().await;
         pty.resize(PtySize {
@@ -258,6 +272,7 @@ impl CtxOptSession {
 
     /// Retourne les statistiques de session
     #[napi]
+    #[allow(clippy::cast_possible_truncation)] // Stats values bounded by practical limits
     pub async fn stats(&self) -> SessionStats {
         // Read locks - peuvent être acquis en parallèle avec d'autres reads
         let analyzer = self.analyzer.read().await;
@@ -280,6 +295,7 @@ impl CtxOptSession {
 
     /// Reset les compteurs de session
     #[napi]
+    #[allow(clippy::significant_drop_tightening)] // Both locks needed for atomic reset
     pub async fn reset_stats(&self) {
         // Write locks - ordre constant: analyzer puis injector
         let mut analyzer = self.analyzer.write().await;
@@ -290,25 +306,28 @@ impl CtxOptSession {
 }
 
 /// Utilitaires exposés à Node.js
-#[allow(missing_docs)] // Supprime warnings pour les types générés par napi macro
 #[napi]
 pub mod utils {
-    use super::*;
+    use super::{TokenEstimator, ContextInjector, stream};
 
     /// Estime le nombre de tokens pour un texte
     #[napi]
+    #[allow(clippy::needless_pass_by_value)] // NAPI requires owned types at JS boundary
+    #[allow(clippy::cast_possible_truncation)] // Token counts bounded by practical limits
     pub fn estimate_tokens(text: String) -> u32 {
         TokenEstimator::new().estimate(&text) as u32
     }
 
     /// Vérifie si un fichier est un fichier code
     #[napi]
+    #[allow(clippy::needless_pass_by_value)] // NAPI requires owned types at JS boundary
     pub fn is_code_file(path: String) -> bool {
         ContextInjector::is_code_file(&path)
     }
 
     /// Retire les codes ANSI d'un texte
     #[napi]
+    #[allow(clippy::needless_pass_by_value)] // NAPI requires owned types at JS boundary
     pub fn strip_ansi(text: String) -> String {
         stream::PATTERNS.ansi_escape.replace_all(&text, "").to_string()
     }
@@ -323,6 +342,7 @@ static RAW_MODE_GUARD: std::sync::Mutex<Option<pty::RawModeGuard>> = std::sync::
 /// This disables echo and line buffering for proper PTY passthrough
 /// Returns true if successful, false if already in raw mode or failed
 #[napi]
+#[allow(clippy::option_if_let_else)] // Match is clearer here
 pub fn enter_raw_mode() -> bool {
     #[cfg(unix)]
     {

@@ -12,7 +12,7 @@ fn bench_strip_ansi(c: &mut Criterion) {
     c.bench_function("strip_ansi_1000", |b| {
         b.iter(|| {
             black_box(ansi_regex.replace_all(&with_ansi, "").to_string())
-        })
+        });
     });
 }
 
@@ -21,7 +21,7 @@ fn bench_pattern_matching(c: &mut Criterion) {
     let rust_error = regex::Regex::new(r"error\[E\d+\]:").unwrap();
     let eslint_error = regex::Regex::new(r"\d+:\d+\s+error\s+").unwrap();
 
-    let sample = r#"
+    let sample = r"
 src/index.ts:10:5 - error TS2304: Cannot find name 'foo'.
 src/index.ts:15:10 - error TS2339: Property 'bar' does not exist.
 src/index.ts:20:1 - error TS2322: Type mismatch.
@@ -29,24 +29,24 @@ error[E0425]: cannot find value `foo` in this scope
 error[E0308]: mismatched types
   5:10  error  'x' is not defined  no-undef
   10:1  error  Unexpected console  no-console
-"#.repeat(10);
+".repeat(10);
 
     c.bench_function("detect_typescript_errors", |b| {
         b.iter(|| {
             black_box(ts_error.find_iter(&sample).count())
-        })
+        });
     });
 
     c.bench_function("detect_rust_errors", |b| {
         b.iter(|| {
             black_box(rust_error.find_iter(&sample).count())
-        })
+        });
     });
 
     c.bench_function("detect_eslint_errors", |b| {
         b.iter(|| {
             black_box(eslint_error.find_iter(&sample).count())
-        })
+        });
     });
 }
 
@@ -57,7 +57,7 @@ fn bench_token_estimation(c: &mut Criterion) {
         b.iter(|| {
             // Simple estimation: ~4 chars per token
             black_box(text.len() / 4)
-        })
+        });
     });
 }
 

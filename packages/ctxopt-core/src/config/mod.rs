@@ -20,7 +20,7 @@ pub struct Config {
 
 impl Config {
     /// Crée une nouvelle configuration avec valeurs par défaut
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             injection_interval_ms: 5000,
             suggestions_enabled: true,

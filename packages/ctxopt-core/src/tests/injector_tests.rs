@@ -1,4 +1,4 @@
-//! Tests pour ContextInjector
+//! Tests pour `ContextInjector`
 
 use crate::injector::ContextInjector;
 use crate::injector::templates::{Suggestion, SuggestionType};
@@ -88,9 +88,9 @@ fn test_prompt_reminder_limit() {
         let result = injector.generate_suggestion(&ContentType::PromptReady);
 
         if i < 3 {
-            assert!(result.is_some(), "Should allow first 3 reminders, failed at {}", i);
+            assert!(result.is_some(), "Should allow first 3 reminders, failed at {i}");
         } else {
-            assert!(result.is_none(), "Should block after 3 reminders, failed at {}", i);
+            assert!(result.is_none(), "Should block after 3 reminders, failed at {i}");
         }
     }
 }

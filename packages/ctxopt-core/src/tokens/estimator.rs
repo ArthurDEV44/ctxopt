@@ -9,11 +9,12 @@ pub struct TokenEstimator {
 
 impl TokenEstimator {
     /// Crée un nouvel estimateur
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {}
     }
 
     /// Estime le nombre de tokens pour un texte
+    #[allow(clippy::unused_self)] // Stateless but kept as method for API consistency
     pub fn estimate(&self, text: &str) -> usize {
         // Use claude-tokenizer's count_tokens function
         // Falls back to approximation if tokenization fails

@@ -3,7 +3,7 @@
 //! Injecte des suggestions dans le stdin du PTY
 //! quand des patterns optimisables sont détectés.
 
-pub(crate) mod templates;
-pub(crate) mod triggers;
+pub mod templates;
+pub mod triggers;
 
-pub(crate) use triggers::ContextInjector;
+pub use triggers::ContextInjector;

@@ -1,0 +1,17 @@
+# Clippy configuration for ctxopt-core
+# See: https://doc.rust-lang.org/clippy/configuration.html
+
+# Don't break the NAPI exported API
+avoid-breaking-exported-api = true
+
+# Cognitive complexity threshold (default: 25)
+cognitive-complexity-threshold = 25
+
+# Maximum number of arguments for a function (default: 7)
+too-many-arguments-threshold = 7
+
+# Maximum number of lines in a function (default: 100)
+too-many-lines-threshold = 100
+
+# Maximum number of bool fields in a struct (default: 3)
+max-struct-bools = 3

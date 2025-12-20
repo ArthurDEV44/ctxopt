@@ -61,7 +61,7 @@ packages/ctxopt-core/src/
 
 ## Phase 4: Clippy Pedantic (Priorité: Basse)
 
-- [ ] [O04 - Clippy Strict](./O04-clippy-strict.md) - Activer lints stricts pour code idiomatique
+- [x] [O04 - Clippy Strict](./O04-clippy-strict.md) - Activer lints stricts pour code idiomatique
 
 ---
 

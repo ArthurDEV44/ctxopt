@@ -1,13 +1,12 @@
 //! Définition des patterns et types de contenu détectés
 //!
-//! Patterns regex compilés une seule fois avec once_cell::Lazy
+//! Patterns regex compilés une seule fois avec `std::sync::LazyLock`
 //! pour détecter les différents types de contenu dans le stream.
 
-use once_cell::sync::Lazy;
 use regex::Regex;
 
 /// Types de contenu détectés dans le flux
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ContentType {
     /// Erreurs de build détectées
     BuildError {
@@ -37,7 +36,7 @@ pub enum ContentType {
 }
 
 /// Outils de build reconnus
-#[derive(Debug, Clone, PartialEq, Copy)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy)]
 pub enum BuildTool {
     TypeScript, // tsc, ts-node
     ESLint,     // eslint
@@ -52,29 +51,30 @@ pub enum BuildTool {
 }
 
 impl BuildTool {
-    pub fn as_str(&self) -> &'static str {
+    #[allow(clippy::trivially_copy_pass_by_ref)] // Keep consistent method signature
+    pub const fn as_str(&self) -> &'static str {
         match self {
-            BuildTool::TypeScript => "tsc",
-            BuildTool::ESLint => "eslint",
-            BuildTool::Rust => "cargo",
-            BuildTool::Go => "go",
-            BuildTool::Python => "python",
-            BuildTool::Webpack => "webpack",
-            BuildTool::Vite => "vite",
-            BuildTool::Generic => "generic",
+            Self::TypeScript => "tsc",
+            Self::ESLint => "eslint",
+            Self::Rust => "cargo",
+            Self::Go => "go",
+            Self::Python => "python",
+            Self::Webpack => "webpack",
+            Self::Vite => "vite",
+            Self::Generic => "generic",
         }
     }
 }
 
 /// Patterns regex compilés une seule fois
-pub static PATTERNS: Lazy<Patterns> = Lazy::new(Patterns::new);
+pub static PATTERNS: std::sync::LazyLock<Patterns> = std::sync::LazyLock::new(Patterns::new);
 
 /// Structure contenant tous les patterns regex pré-compilés
 pub struct Patterns {
     /// Erreurs TypeScript: TS2304, TS7006, etc.
     pub typescript_error: Regex,
 
-    /// Erreurs ESLint
+    /// Erreurs `ESLint`
     pub eslint_error: Regex,
 
     /// Erreurs Rust/Cargo
@@ -89,7 +89,7 @@ pub struct Patterns {
     /// Pattern générique d'erreur
     pub generic_error: Regex,
 
-    /// Lecture de fichier (Read tool, file_path)
+    /// Lecture de fichier (Read tool, `file_path`)
     pub file_read: Regex,
 
     /// Prompt ready (❯, >, $)

@@ -3,6 +3,6 @@
 //! Fournit des estimations de tokens pour
 //! afficher les statistiques en temps réel.
 
-pub(crate) mod estimator;
+pub mod estimator;
 
-pub(crate) use estimator::TokenEstimator;
+pub use estimator::TokenEstimator;

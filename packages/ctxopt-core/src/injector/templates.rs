@@ -6,7 +6,7 @@
 use crate::stream::patterns::BuildTool;
 
 /// Type de suggestion
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SuggestionType {
     /// Erreurs de build détectées
     BuildErrors,
@@ -48,9 +48,8 @@ impl Suggestion {
         Self {
             suggestion_type: SuggestionType::LargeOutput,
             display_message: format!(
-                "\x1b[33m[ctxopt]\x1b[0m Large output (~{}KB). \
-                 Use \x1b[36mmcp__ctxopt__compress_context\x1b[0m for 40-60% savings.",
-                size_kb
+                "\x1b[33m[ctxopt]\x1b[0m Large output (~{size_kb}KB). \
+                 Use \x1b[36mmcp__ctxopt__compress_context\x1b[0m for 40-60% savings."
             ),
         }
     }
@@ -70,9 +69,8 @@ impl Suggestion {
         Self {
             suggestion_type: SuggestionType::FileRead,
             display_message: format!(
-                "\x1b[33m[ctxopt]\x1b[0m Reading {}. \
-                 Consider \x1b[36mmcp__ctxopt__smart_file_read\x1b[0m for 50-70% savings.",
-                file_path
+                "\x1b[33m[ctxopt]\x1b[0m Reading {file_path}. \
+                 Consider \x1b[36mmcp__ctxopt__smart_file_read\x1b[0m for 50-70% savings."
             ),
         }
     }

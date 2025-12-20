@@ -1,4 +1,4 @@
-//! PtyManager implementation
+//! `PtyManager` implementation
 //!
 //! Gère le cycle de vie du PTY et la communication avec le process enfant.
 
@@ -96,7 +96,7 @@ impl PtyError {
         }
     }
 
-    /// Create error for PTY creation failure from anyhow::Error.
+    /// Create error for PTY creation failure from `anyhow::Error`.
     pub fn create_anyhow(source: anyhow::Error) -> Self {
         Self::Create {
             source: source.into(),
@@ -114,7 +114,7 @@ impl PtyError {
         }
     }
 
-    /// Create error for command spawn failure from anyhow::Error.
+    /// Create error for command spawn failure from `anyhow::Error`.
     pub fn spawn_anyhow(command: impl Into<String>, source: anyhow::Error) -> Self {
         Self::Spawn {
             command: command.into(),
@@ -123,7 +123,7 @@ impl PtyError {
     }
 
     /// Create error for write failure.
-    pub fn write(source: std::io::Error) -> Self {
+    pub const fn write(source: std::io::Error) -> Self {
         Self::Write {
             operation: "write to",
             source,
@@ -131,7 +131,7 @@ impl PtyError {
     }
 
     /// Create error for flush failure.
-    pub fn flush(source: std::io::Error) -> Self {
+    pub const fn flush(source: std::io::Error) -> Self {
         Self::Write {
             operation: "flush",
             source,
@@ -139,7 +139,7 @@ impl PtyError {
     }
 
     /// Create error for read failure.
-    pub fn io_read(source: std::io::Error) -> Self {
+    pub const fn io_read(source: std::io::Error) -> Self {
         Self::Io {
             operation: "read",
             source,
@@ -148,7 +148,7 @@ impl PtyError {
 
     /// Create error for terminal configuration failure (Unix).
     #[cfg(unix)]
-    pub fn termios(context: &'static str, source: nix::Error) -> Self {
+    pub const fn termios(context: &'static str, source: nix::Error) -> Self {
         Self::Termios { context, source }
     }
 
@@ -165,7 +165,7 @@ impl PtyError {
         }
     }
 
-    /// Create error for resize failure from anyhow::Error.
+    /// Create error for resize failure from `anyhow::Error`.
     pub fn resize_anyhow(rows: u16, cols: u16, source: anyhow::Error) -> Self {
         Self::Resize {
             rows,
@@ -181,7 +181,7 @@ impl PtyError {
         }
     }
 
-    /// Create error for wait failure from anyhow::Error.
+    /// Create error for wait failure from `anyhow::Error`.
     pub fn wait_anyhow(source: anyhow::Error) -> Self {
         Self::Wait {
             source: source.into(),
@@ -195,7 +195,7 @@ impl PtyError {
         }
     }
 
-    /// Create error for kill failure from anyhow::Error.
+    /// Create error for kill failure from `anyhow::Error`.
     pub fn kill_anyhow(source: anyhow::Error) -> Self {
         Self::Kill {
             source: source.into(),
@@ -206,14 +206,16 @@ impl PtyError {
 impl From<PtyError> for napi::Error {
     fn from(err: PtyError) -> Self {
         use std::error::Error;
+        use std::fmt::Write;
 
         let mut message = err.to_string();
         let mut source = err.source();
         while let Some(cause) = source {
-            message.push_str(&format!("\n  Caused by: {}", cause));
+            // Using write! avoids extra allocation from format!
+            let _ = write!(message, "\n  Caused by: {cause}");
             source = cause.source();
         }
-        napi::Error::from_reason(message)
+        Self::from_reason(message)
     }
 }
 
@@ -305,7 +307,7 @@ impl Default for PtySize {
 
 impl From<PtySize> for PortablePtySize {
     fn from(size: PtySize) -> Self {
-        PortablePtySize {
+        Self {
             rows: size.rows,
             cols: size.cols,
             pixel_width: 0,
@@ -445,12 +447,13 @@ impl PtyManager {
             rx.recv()
         ).await {
             Ok(Some(data)) => Ok(data),
-            Ok(None) => Ok(Vec::new()), // Channel fermé
-            Err(_) => Ok(Vec::new()),   // Timeout
+            // Channel closed or timeout - return empty
+            Ok(None) | Err(_) => Ok(Vec::new()),
         }
     }
 
     /// Écrit des données dans le PTY (stdin du child)
+    #[allow(clippy::significant_drop_tightening)] // Lock held across both operations intentionally
     pub async fn write(&self, data: &[u8]) -> Result<(), PtyError> {
         let mut writer = self.writer.lock().await;
         writer.write_all(data).map_err(PtyError::write)?;
@@ -471,6 +474,7 @@ impl PtyManager {
     }
 
     /// Attend la fin du child process et retourne le code de sortie
+    #[allow(clippy::significant_drop_tightening)] // Lock must be held during wait
     pub async fn wait(&self) -> Result<u32, PtyError> {
         let mut child = self.child.lock().await;
         let status = child.wait().map_err(PtyError::wait)?;
@@ -478,6 +482,7 @@ impl PtyManager {
     }
 
     /// Redimensionne le PTY
+    #[allow(clippy::significant_drop_tightening)] // Lock scope is minimal
     pub async fn resize(&self, new_size: PtySize) -> Result<(), PtyError> {
         let master = self.master.lock().await;
         master
@@ -487,6 +492,7 @@ impl PtyManager {
     }
 
     /// Termine le child process
+    #[allow(clippy::significant_drop_tightening)] // Lock scope is minimal
     pub async fn kill(&self) -> Result<(), PtyError> {
         let mut child = self.child.lock().await;
         child.kill().map_err(PtyError::kill)?;

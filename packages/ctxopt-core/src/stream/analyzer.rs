@@ -108,6 +108,7 @@ impl StreamAnalyzer {
     }
 
     /// Supprime les codes ANSI escape
+    #[allow(clippy::unused_self)] // Keep as method for API consistency
     fn strip_ansi(&self, text: &str) -> String {
         PATTERNS.ansi_escape.replace_all(text, "").to_string()
     }
@@ -178,6 +179,7 @@ impl StreamAnalyzer {
     }
 
     /// Détecte les lectures de fichiers
+    #[allow(clippy::unused_self)] // Keep as method for API consistency
     fn detect_file_read(&self, text: &str) -> Option<ContentType> {
         if let Some(captures) = PATTERNS.file_read.captures(text) {
             if let Some(file_match) = captures.get(4) {
@@ -197,12 +199,12 @@ impl StreamAnalyzer {
     }
 
     /// Retourne le total de tokens estimés
-    pub fn total_tokens(&self) -> usize {
+    pub const fn total_tokens(&self) -> usize {
         self.total_tokens
     }
 
     /// Retourne le total d'erreurs détectées
-    pub fn total_errors(&self) -> usize {
+    pub const fn total_errors(&self) -> usize {
         self.error_count
     }
 

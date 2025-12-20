@@ -1,4 +1,4 @@
-//! Tests pour StreamAnalyzer
+//! Tests pour `StreamAnalyzer`
 
 use crate::stream::StreamAnalyzer;
 use crate::stream::patterns::{BuildTool, ContentType};
@@ -7,11 +7,11 @@ use crate::stream::patterns::{BuildTool, ContentType};
 fn test_detect_typescript_errors() {
     let mut analyzer = StreamAnalyzer::new();
 
-    let typescript_output = r#"
+    let typescript_output = r"
 src/index.ts:10:5 - error TS2304: Cannot find name 'foo'.
 src/index.ts:15:10 - error TS2339: Property 'bar' does not exist on type 'string'.
 src/index.ts:20:1 - error TS2322: Type 'number' is not assignable to type 'string'.
-    "#;
+    ";
 
     let result = analyzer.analyze(typescript_output);
 
@@ -55,14 +55,14 @@ error: aborting due to 2 previous errors
 fn test_detect_eslint_errors() {
     let mut analyzer = StreamAnalyzer::new();
 
-    let eslint_output = r#"
+    let eslint_output = r"
 /src/index.ts
   10:5  error  'foo' is not defined  no-undef
   15:1  error  Unexpected console statement  no-console
   20:3  warning  'bar' is defined but never used  @typescript-eslint/no-unused-vars
 
 3 problems (2 errors, 1 warning)
-    "#;
+    ";
 
     let result = analyzer.analyze(eslint_output);
 
@@ -110,7 +110,7 @@ fn test_strip_ansi_codes() {
     let clean = PATTERNS.ansi_escape.replace_all(with_ansi, "").to_string();
 
     assert_eq!(clean, "Error: Something failed");
-    assert!(!clean.contains("\x1b"), "Should not contain ANSI codes");
+    assert!(!clean.contains('\x1b'), "Should not contain ANSI codes");
 }
 
 #[test]

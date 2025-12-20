@@ -1,7 +1,7 @@
 //! Logique de déclenchement des injections
 //!
 //! Détermine quand et quoi injecter dans le stdin basé sur
-//! le ContentType détecté par le StreamAnalyzer.
+//! le `ContentType` détecté par le `StreamAnalyzer`.
 
 use super::templates::{Suggestion, SuggestionType};
 use crate::stream::patterns::ContentType;
@@ -39,7 +39,7 @@ impl ContextInjector {
     pub fn new() -> Self {
         Self {
             // Permet une injection immédiate au démarrage
-            last_injection: Instant::now() - Duration::from_secs(60),
+            last_injection: Instant::now().checked_sub(Duration::from_secs(60)).unwrap(),
             min_interval: Duration::from_secs(MIN_INJECTION_INTERVAL_SECS),
             suggestions_count: 0,
             prompt_reminder_count: 0,
@@ -57,13 +57,13 @@ impl ContextInjector {
     }
 
     /// Active/désactive les suggestions
-    pub fn set_enabled(&mut self, enabled: bool) {
+    pub const fn set_enabled(&mut self, enabled: bool) {
         self.enabled = enabled;
     }
 
     /// Retourne si les suggestions sont activées (utilisé dans les tests)
     #[allow(dead_code)]
-    pub fn is_enabled(&self) -> bool {
+    pub const fn is_enabled(&self) -> bool {
         self.enabled
     }
 
@@ -81,7 +81,7 @@ impl ContextInjector {
             .any(|t| t == suggestion_type)
     }
 
-    /// Évalue si une injection doit être faite pour le ContentType donné
+    /// Évalue si une injection doit être faite pour le `ContentType` donné
     pub fn should_inject(&self, content_type: &ContentType) -> bool {
         if !self.can_inject() {
             return false;
@@ -109,7 +109,7 @@ impl ContextInjector {
         }
     }
 
-    /// Génère une suggestion pour le ContentType donné
+    /// Génère une suggestion pour le `ContentType` donné
     pub fn generate_suggestion(&mut self, content_type: &ContentType) -> Option<Suggestion> {
         if !self.should_inject(content_type) {
             return None;
@@ -159,13 +159,13 @@ impl ContextInjector {
     }
 
     /// Retourne le nombre total de suggestions générées
-    pub fn total_suggestions(&self) -> usize {
+    pub const fn total_suggestions(&self) -> usize {
         self.suggestions_count
     }
 
     /// Retourne le nombre de prompt reminders utilisés (utilisé dans les tests)
     #[allow(dead_code)]
-    pub fn prompt_reminders_used(&self) -> usize {
+    pub const fn prompt_reminders_used(&self) -> usize {
         self.prompt_reminder_count
     }
 
@@ -174,11 +174,12 @@ impl ContextInjector {
         self.suggestions_count = 0;
         self.prompt_reminder_count = 0;
         self.recent_types.clear();
-        self.last_injection = Instant::now() - Duration::from_secs(60);
+        self.last_injection = Instant::now().checked_sub(Duration::from_secs(60)).unwrap();
     }
 
     /// Retourne le temps restant avant prochaine injection possible (en ms, utilisé dans les tests)
     #[allow(dead_code)]
+    #[allow(clippy::cast_possible_truncation)] // Interval is always < u64::MAX ms
     pub fn time_until_next_injection(&self) -> u64 {
         let elapsed = self.last_injection.elapsed();
         if elapsed >= self.min_interval {
@@ -307,13 +308,13 @@ mod tests {
         // Les 3 premiers OK
         for i in 0..3 {
             // Reset throttle pour test
-            injector.last_injection = Instant::now() - Duration::from_secs(60);
+            injector.last_injection = Instant::now().checked_sub(Duration::from_secs(60)).unwrap();
             let suggestion = injector.generate_suggestion(&ContentType::PromptReady);
             assert!(suggestion.is_some(), "Reminder {} should be allowed", i + 1);
         }
 
         // Le 4ème bloqué
-        injector.last_injection = Instant::now() - Duration::from_secs(60);
+        injector.last_injection = Instant::now().checked_sub(Duration::from_secs(60)).unwrap();
         assert!(injector
             .generate_suggestion(&ContentType::PromptReady)
             .is_none());
@@ -341,7 +342,7 @@ mod tests {
 
         // Générer quelques suggestions
         injector.generate_suggestion(&ContentType::PromptReady);
-        injector.last_injection = Instant::now() - Duration::from_secs(60);
+        injector.last_injection = Instant::now().checked_sub(Duration::from_secs(60)).unwrap();
         injector.generate_suggestion(&ContentType::LargeOutput { size: 20000 });
 
         assert!(injector.total_suggestions() > 0);
