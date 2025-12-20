@@ -43,7 +43,7 @@ packages/ctxopt-core/src/
 
 ## Phase 1: Error Handling Modernization (Priorité: Moyenne)
 
-- [ ] [O01 - Error Handling](./O01-error-handling.md) - Améliorer la gestion d'erreurs avec thiserror
+- [x] [O01 - Error Handling](./O01-error-handling.md) - Améliorer la gestion d'erreurs avec thiserror
 
 ---
 

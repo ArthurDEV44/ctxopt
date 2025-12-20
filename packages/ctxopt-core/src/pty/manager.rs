@@ -16,24 +16,205 @@ use nix::sys::termios::{self, InputFlags, LocalFlags, OutputFlags, SetArg, Termi
 #[cfg(unix)]
 use std::os::unix::io::{BorrowedFd, RawFd};
 
-/// Erreurs du module PTY
+/// Errors that can occur during PTY operations.
+///
+/// Each variant preserves the source error chain for debugging.
 #[derive(Error, Debug)]
-#[allow(clippy::enum_variant_names)]
 pub enum PtyError {
-    #[error("Failed to create PTY: {0}")]
-    CreateError(String),
+    /// Failed to create the PTY pair.
+    #[error("Failed to create PTY")]
+    Create {
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 
-    #[error("Failed to spawn command: {0}")]
-    SpawnError(String),
+    /// Failed to spawn the child process.
+    #[error("Failed to spawn command '{command}'")]
+    Spawn {
+        command: String,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
 
-    #[error("Failed to write to PTY: {0}")]
-    WriteError(String),
+    /// Failed to write data to PTY.
+    #[error("Failed to {operation} PTY")]
+    Write {
+        operation: &'static str,
+        #[source]
+        source: std::io::Error,
+    },
 
-    #[error("IO error: {0}")]
-    IoError(#[from] std::io::Error),
+    /// IO operation failed.
+    #[error("IO error during {operation}")]
+    Io {
+        operation: &'static str,
+        #[source]
+        source: std::io::Error,
+    },
 
-    #[error("Failed to configure terminal: {0}")]
-    TermiosError(String),
+    /// Failed to configure terminal settings (Unix only).
+    #[error("Failed to configure terminal: {context}")]
+    Termios {
+        context: &'static str,
+        #[cfg(unix)]
+        #[source]
+        source: nix::Error,
+        #[cfg(not(unix))]
+        #[source]
+        source: std::io::Error,
+    },
+
+    /// Failed to resize PTY.
+    #[error("Failed to resize PTY to {rows}x{cols}")]
+    Resize {
+        rows: u16,
+        cols: u16,
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    /// Failed to wait for process.
+    #[error("Failed to wait for process")]
+    Wait {
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+
+    /// Failed to kill process.
+    #[error("Failed to kill process")]
+    Kill {
+        #[source]
+        source: Box<dyn std::error::Error + Send + Sync>,
+    },
+}
+
+impl PtyError {
+    /// Create error for PTY creation failure.
+    pub fn create<E: std::error::Error + Send + Sync + 'static>(source: E) -> Self {
+        Self::Create {
+            source: Box::new(source),
+        }
+    }
+
+    /// Create error for PTY creation failure from anyhow::Error.
+    pub fn create_anyhow(source: anyhow::Error) -> Self {
+        Self::Create {
+            source: source.into(),
+        }
+    }
+
+    /// Create error for command spawn failure.
+    pub fn spawn<E: std::error::Error + Send + Sync + 'static>(
+        command: impl Into<String>,
+        source: E,
+    ) -> Self {
+        Self::Spawn {
+            command: command.into(),
+            source: Box::new(source),
+        }
+    }
+
+    /// Create error for command spawn failure from anyhow::Error.
+    pub fn spawn_anyhow(command: impl Into<String>, source: anyhow::Error) -> Self {
+        Self::Spawn {
+            command: command.into(),
+            source: source.into(),
+        }
+    }
+
+    /// Create error for write failure.
+    pub fn write(source: std::io::Error) -> Self {
+        Self::Write {
+            operation: "write to",
+            source,
+        }
+    }
+
+    /// Create error for flush failure.
+    pub fn flush(source: std::io::Error) -> Self {
+        Self::Write {
+            operation: "flush",
+            source,
+        }
+    }
+
+    /// Create error for read failure.
+    pub fn io_read(source: std::io::Error) -> Self {
+        Self::Io {
+            operation: "read",
+            source,
+        }
+    }
+
+    /// Create error for terminal configuration failure (Unix).
+    #[cfg(unix)]
+    pub fn termios(context: &'static str, source: nix::Error) -> Self {
+        Self::Termios { context, source }
+    }
+
+    /// Create error for resize failure.
+    pub fn resize<E: std::error::Error + Send + Sync + 'static>(
+        rows: u16,
+        cols: u16,
+        source: E,
+    ) -> Self {
+        Self::Resize {
+            rows,
+            cols,
+            source: Box::new(source),
+        }
+    }
+
+    /// Create error for resize failure from anyhow::Error.
+    pub fn resize_anyhow(rows: u16, cols: u16, source: anyhow::Error) -> Self {
+        Self::Resize {
+            rows,
+            cols,
+            source: source.into(),
+        }
+    }
+
+    /// Create error for wait failure.
+    pub fn wait<E: std::error::Error + Send + Sync + 'static>(source: E) -> Self {
+        Self::Wait {
+            source: Box::new(source),
+        }
+    }
+
+    /// Create error for wait failure from anyhow::Error.
+    pub fn wait_anyhow(source: anyhow::Error) -> Self {
+        Self::Wait {
+            source: source.into(),
+        }
+    }
+
+    /// Create error for kill failure.
+    pub fn kill<E: std::error::Error + Send + Sync + 'static>(source: E) -> Self {
+        Self::Kill {
+            source: Box::new(source),
+        }
+    }
+
+    /// Create error for kill failure from anyhow::Error.
+    pub fn kill_anyhow(source: anyhow::Error) -> Self {
+        Self::Kill {
+            source: source.into(),
+        }
+    }
+}
+
+impl From<PtyError> for napi::Error {
+    fn from(err: PtyError) -> Self {
+        use std::error::Error;
+
+        let mut message = err.to_string();
+        let mut source = err.source();
+        while let Some(cause) = source {
+            message.push_str(&format!("\n  Caused by: {}", cause));
+            source = cause.source();
+        }
+        napi::Error::from_reason(message)
+    }
 }
 
 /// Guard that restores terminal settings on drop
@@ -52,7 +233,7 @@ impl RawModeGuard {
         let borrowed_fd = unsafe { BorrowedFd::borrow_raw(fd) };
 
         let original = termios::tcgetattr(borrowed_fd)
-            .map_err(|e| PtyError::TermiosError(format!("tcgetattr failed: {}", e)))?;
+            .map_err(|e| PtyError::termios("tcgetattr", e))?;
 
         let mut raw = original.clone();
 
@@ -80,7 +261,7 @@ impl RawModeGuard {
         raw.input_flags.remove(InputFlags::INPCK);
 
         termios::tcsetattr(borrowed_fd, SetArg::TCSANOW, &raw)
-            .map_err(|e| PtyError::TermiosError(format!("tcsetattr failed: {}", e)))?;
+            .map_err(|e| PtyError::termios("tcsetattr", e))?;
 
         Ok(Self { fd, original })
     }
@@ -167,7 +348,7 @@ impl PtyManager {
         // Créer la paire master/slave
         let pair = pty_system
             .openpty(size.into())
-            .map_err(|e| PtyError::CreateError(e.to_string()))?;
+            .map_err(PtyError::create_anyhow)?;
 
         // Construire la commande
         let mut cmd = CommandBuilder::new(command);
@@ -189,18 +370,18 @@ impl PtyManager {
         let child = pair
             .slave
             .spawn_command(cmd)
-            .map_err(|e| PtyError::SpawnError(e.to_string()))?;
+            .map_err(|e| PtyError::spawn_anyhow(command, e))?;
 
         // Obtenir writer et reader du master
         let writer = pair
             .master
             .take_writer()
-            .map_err(|e| PtyError::CreateError(e.to_string()))?;
+            .map_err(PtyError::create_anyhow)?;
 
         let mut reader = pair
             .master
             .try_clone_reader()
-            .map_err(|e| PtyError::CreateError(e.to_string()))?;
+            .map_err(PtyError::create_anyhow)?;
 
         // Créer un channel pour la communication avec le thread de lecture
         let (read_tx, read_rx) = tokio::sync::mpsc::channel::<Vec<u8>>(100);
@@ -272,12 +453,8 @@ impl PtyManager {
     /// Écrit des données dans le PTY (stdin du child)
     pub async fn write(&self, data: &[u8]) -> Result<(), PtyError> {
         let mut writer = self.writer.lock().await;
-        writer
-            .write_all(data)
-            .map_err(|e| PtyError::WriteError(e.to_string()))?;
-        writer
-            .flush()
-            .map_err(|e| PtyError::WriteError(e.to_string()))?;
+        writer.write_all(data).map_err(PtyError::write)?;
+        writer.flush().map_err(PtyError::flush)?;
         Ok(())
     }
 
@@ -296,9 +473,7 @@ impl PtyManager {
     /// Attend la fin du child process et retourne le code de sortie
     pub async fn wait(&self) -> Result<u32, PtyError> {
         let mut child = self.child.lock().await;
-        let status = child
-            .wait()
-            .map_err(|e| PtyError::SpawnError(e.to_string()))?;
+        let status = child.wait().map_err(PtyError::wait)?;
         Ok(status.exit_code())
     }
 
@@ -307,16 +482,14 @@ impl PtyManager {
         let master = self.master.lock().await;
         master
             .resize(new_size.into())
-            .map_err(|e| PtyError::CreateError(e.to_string()))?;
+            .map_err(|e| PtyError::resize_anyhow(new_size.rows, new_size.cols, e))?;
         Ok(())
     }
 
     /// Termine le child process
     pub async fn kill(&self) -> Result<(), PtyError> {
         let mut child = self.child.lock().await;
-        child
-            .kill()
-            .map_err(|e| PtyError::SpawnError(e.to_string()))?;
+        child.kill().map_err(PtyError::kill)?;
         Ok(())
     }
 }

@@ -1,6 +1,6 @@
 //! Tests pour PtyManager
 
-use crate::pty::{PtyManager, PtySize};
+use crate::pty::{PtyError, PtyManager, PtySize};
 
 #[tokio::test]
 async fn test_pty_spawn_and_read() {
@@ -83,4 +83,130 @@ fn test_pty_size_default() {
     let size = PtySize::default();
     assert_eq!(size.rows, 24);
     assert_eq!(size.cols, 80);
+}
+
+// =====================
+// Error Handling Tests
+// =====================
+
+#[test]
+fn test_error_chain_preserved_write() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "root cause");
+    let pty_err = PtyError::write(io_err);
+
+    let msg = pty_err.to_string();
+    assert!(msg.contains("write"), "Expected 'write' in message: {}", msg);
+    assert!(pty_err.source().is_some(), "Source should be preserved");
+}
+
+#[test]
+fn test_error_chain_preserved_flush() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "flush failed");
+    let pty_err = PtyError::flush(io_err);
+
+    let msg = pty_err.to_string();
+    assert!(msg.contains("flush"), "Expected 'flush' in message: {}", msg);
+    assert!(pty_err.source().is_some(), "Source should be preserved");
+}
+
+#[test]
+fn test_spawn_error_includes_command() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::NotFound, "command not found");
+    let pty_err = PtyError::spawn("nonexistent_cmd", io_err);
+
+    let msg = pty_err.to_string();
+    assert!(
+        msg.contains("nonexistent_cmd"),
+        "Expected command name in message: {}",
+        msg
+    );
+    assert!(pty_err.source().is_some(), "Source should be preserved");
+}
+
+#[test]
+fn test_resize_error_includes_dimensions() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "resize failed");
+    let pty_err = PtyError::resize(40, 120, io_err);
+
+    let msg = pty_err.to_string();
+    assert!(msg.contains("40"), "Expected rows in message: {}", msg);
+    assert!(msg.contains("120"), "Expected cols in message: {}", msg);
+    assert!(pty_err.source().is_some(), "Source should be preserved");
+}
+
+#[test]
+fn test_napi_error_includes_cause_chain() {
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "root cause");
+    let pty_err = PtyError::write(io_err);
+    let napi_err: napi::Error = pty_err.into();
+
+    let reason = napi_err.reason;
+    assert!(
+        reason.contains("write"),
+        "Expected 'write' in napi error: {}",
+        reason
+    );
+    assert!(
+        reason.contains("root cause"),
+        "Expected cause in napi error: {}",
+        reason
+    );
+    assert!(
+        reason.contains("Caused by"),
+        "Expected 'Caused by' in napi error: {}",
+        reason
+    );
+}
+
+#[test]
+fn test_create_error_preserves_source() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "pty creation failed");
+    let pty_err = PtyError::create(io_err);
+
+    assert!(
+        pty_err.to_string().contains("create") || pty_err.to_string().contains("PTY"),
+        "Expected create/PTY in message: {}",
+        pty_err
+    );
+    assert!(pty_err.source().is_some(), "Source should be preserved");
+}
+
+#[test]
+fn test_wait_error() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "wait failed");
+    let pty_err = PtyError::wait(io_err);
+
+    assert!(
+        pty_err.to_string().contains("wait"),
+        "Expected 'wait' in message: {}",
+        pty_err
+    );
+    assert!(pty_err.source().is_some(), "Source should be preserved");
+}
+
+#[test]
+fn test_kill_error() {
+    use std::error::Error;
+
+    let io_err = std::io::Error::new(std::io::ErrorKind::Other, "kill failed");
+    let pty_err = PtyError::kill(io_err);
+
+    assert!(
+        pty_err.to_string().contains("kill"),
+        "Expected 'kill' in message: {}",
+        pty_err
+    );
+    assert!(pty_err.source().is_some(), "Source should be preserved");
 }

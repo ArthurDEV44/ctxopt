@@ -108,8 +108,7 @@ impl CtxOptSession {
 
         let cmd = command.unwrap_or_else(|| "claude".to_string());
 
-        let pty = PtyManager::new(&cmd, &[], size)
-            .map_err(|e| Error::from_reason(format!("Failed to create PTY: {}", e)))?;
+        let pty = PtyManager::new(&cmd, &[], size).map_err(napi::Error::from)?;
 
         Ok(Self {
             pty: Arc::new(Mutex::new(pty)),
@@ -150,9 +149,7 @@ impl CtxOptSession {
         // Scope 1: PTY lock seulement pour la lecture
         let output_bytes = {
             let pty = self.pty.lock().await;
-            pty.read_async()
-                .await
-                .map_err(|e| Error::from_reason(format!("Read error: {}", e)))?
+            pty.read_async().await.map_err(napi::Error::from)?
         }; // Lock PTY libéré ici
 
         // Conversion en string - garde l'output brut avec ANSI
@@ -209,18 +206,14 @@ impl CtxOptSession {
     #[napi]
     pub async fn write(&self, data: String) -> Result<()> {
         let pty = self.pty.lock().await;
-        pty.write_str(&data)
-            .await
-            .map_err(|e| Error::from_reason(format!("Write error: {}", e)))
+        pty.write_str(&data).await.map_err(napi::Error::from)
     }
 
     /// Écrit des bytes bruts dans le PTY
     #[napi]
     pub async fn write_bytes(&self, data: Buffer) -> Result<()> {
         let pty = self.pty.lock().await;
-        pty.write(&data)
-            .await
-            .map_err(|e| Error::from_reason(format!("Write error: {}", e)))
+        pty.write(&data).await.map_err(napi::Error::from)
     }
 
     /// Vérifie si le process est toujours en cours d'exécution
@@ -234,9 +227,7 @@ impl CtxOptSession {
     #[napi]
     pub async fn wait(&self) -> Result<u32> {
         let pty = self.pty.lock().await;
-        pty.wait()
-            .await
-            .map_err(|e| Error::from_reason(format!("Wait error: {}", e)))
+        pty.wait().await.map_err(napi::Error::from)
     }
 
     /// Redimensionne le PTY
@@ -248,16 +239,14 @@ impl CtxOptSession {
             cols: cols as u16,
         })
         .await
-        .map_err(|e| Error::from_reason(format!("Resize error: {}", e)))
+        .map_err(napi::Error::from)
     }
 
     /// Termine le process
     #[napi]
     pub async fn kill(&self) -> Result<()> {
         let pty = self.pty.lock().await;
-        pty.kill()
-            .await
-            .map_err(|e| Error::from_reason(format!("Kill error: {}", e)))
+        pty.kill().await.map_err(napi::Error::from)
     }
 
     /// Retourne les statistiques de session

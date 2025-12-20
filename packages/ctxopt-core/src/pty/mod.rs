@@ -5,7 +5,9 @@
 
 pub mod manager;
 
-pub use manager::{enter_raw_mode, PtyManager, PtySize};
+// PtyError is used in tests and may be used by consumers
+#[allow(unused_imports)]
+pub use manager::{enter_raw_mode, PtyError, PtyManager, PtySize};
 
 #[cfg(unix)]
 pub use manager::RawModeGuard;
