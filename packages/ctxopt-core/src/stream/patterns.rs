@@ -43,9 +43,7 @@ pub enum BuildTool {
     Rust,       // cargo, rustc
     Go,         // go build
     Python,     // python, pytest
-    #[allow(dead_code)] // TODO: implement webpack pattern detection (O05)
     Webpack,    // webpack
-    #[allow(dead_code)] // TODO: implement vite pattern detection (O05)
     Vite,       // vite
     Generic,    // autre
 }
@@ -86,6 +84,12 @@ pub struct Patterns {
     /// Erreurs Python
     pub python_error: Regex,
 
+    /// Erreurs Webpack
+    pub webpack_error: Regex,
+
+    /// Erreurs Vite
+    pub vite_error: Regex,
+
     /// Pattern générique d'erreur
     pub generic_error: Regex,
 
@@ -120,6 +124,18 @@ impl Patterns {
             // Python: NameError, ImportError, SyntaxError
             python_error: Regex::new(
                 r"(?i)(NameError|ImportError|SyntaxError|ModuleNotFoundError|TypeError):",
+            )
+            .unwrap(),
+
+            // Webpack: ERROR in, Module build failed, ModuleNotFoundError
+            webpack_error: Regex::new(
+                r"(?i)(ERROR in\s|Module build failed|ModuleNotFoundError|Cannot resolve module)",
+            )
+            .unwrap(),
+
+            // Vite: [vite], error during build, Pre-transform error
+            vite_error: Regex::new(
+                r"(?i)(\[vite\]|error during build|Pre-transform error|Failed to resolve)",
             )
             .unwrap(),
 
@@ -196,6 +212,36 @@ mod tests {
             .go_error
             .is_match("cannot find package \"fmt\""));
         assert!(PATTERNS.go_error.is_match("syntax error: unexpected"));
+    }
+
+    #[test]
+    fn test_webpack_pattern() {
+        assert!(PATTERNS
+            .webpack_error
+            .is_match("ERROR in ./src/index.js"));
+        assert!(PATTERNS
+            .webpack_error
+            .is_match("Module build failed: Error"));
+        assert!(PATTERNS
+            .webpack_error
+            .is_match("ModuleNotFoundError: Module not found"));
+        assert!(PATTERNS
+            .webpack_error
+            .is_match("Cannot resolve module 'lodash'"));
+    }
+
+    #[test]
+    fn test_vite_pattern() {
+        assert!(PATTERNS
+            .vite_error
+            .is_match("[vite] Internal server error"));
+        assert!(PATTERNS.vite_error.is_match("error during build:"));
+        assert!(PATTERNS
+            .vite_error
+            .is_match("Pre-transform error: Failed to load"));
+        assert!(PATTERNS
+            .vite_error
+            .is_match("Failed to resolve import"));
     }
 
     #[test]

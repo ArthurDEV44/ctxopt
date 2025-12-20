@@ -165,6 +165,26 @@ impl StreamAnalyzer {
             });
         }
 
+        // Webpack
+        let webpack_count = PATTERNS.webpack_error.find_iter(text).count();
+        if webpack_count > 0 {
+            self.error_count += webpack_count;
+            return Some(ContentType::BuildError {
+                error_count: webpack_count,
+                tool: BuildTool::Webpack,
+            });
+        }
+
+        // Vite
+        let vite_count = PATTERNS.vite_error.find_iter(text).count();
+        if vite_count > 0 {
+            self.error_count += vite_count;
+            return Some(ContentType::BuildError {
+                error_count: vite_count,
+                tool: BuildTool::Vite,
+            });
+        }
+
         // Générique (dernière priorité)
         let generic_count = PATTERNS.generic_error.find_iter(text).count();
         if generic_count > 0 {
@@ -283,6 +303,34 @@ mod tests {
             ct,
             ContentType::BuildError {
                 tool: BuildTool::Go,
+                ..
+            }
+        )));
+    }
+
+    #[test]
+    fn test_detect_webpack_error() {
+        let mut analyzer = StreamAnalyzer::new();
+        let result = analyzer.analyze("ERROR in ./src/index.js\nModule build failed");
+
+        assert!(result.content_types.iter().any(|ct| matches!(
+            ct,
+            ContentType::BuildError {
+                tool: BuildTool::Webpack,
+                ..
+            }
+        )));
+    }
+
+    #[test]
+    fn test_detect_vite_error() {
+        let mut analyzer = StreamAnalyzer::new();
+        let result = analyzer.analyze("[vite] Internal server error: Failed to resolve");
+
+        assert!(result.content_types.iter().any(|ct| matches!(
+            ct,
+            ContentType::BuildError {
+                tool: BuildTool::Vite,
                 ..
             }
         )));

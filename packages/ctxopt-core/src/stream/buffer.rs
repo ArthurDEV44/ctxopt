@@ -35,7 +35,7 @@ impl RingBuffer {
     }
 
     /// Retourne le contenu actuel du buffer comme String (utilisé dans les tests)
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn content(&self) -> String {
         self.data.iter().collect()
     }
@@ -51,7 +51,7 @@ impl RingBuffer {
     }
 
     /// Vérifie si le buffer est vide (utilisé dans les tests)
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn is_empty(&self) -> bool {
         self.data.is_empty()
     }
@@ -63,7 +63,7 @@ impl RingBuffer {
     }
 
     /// Retourne la capacité maximale (utilisé dans les tests)
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub const fn capacity(&self) -> usize {
         self.capacity
     }

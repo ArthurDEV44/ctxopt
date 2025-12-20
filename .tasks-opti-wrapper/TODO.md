@@ -67,7 +67,7 @@ packages/ctxopt-core/src/
 
 ## Phase 5: Feature Completion or Removal (Priorité: Basse)
 
-- [ ] [O05 - Feature Audit](./O05-feature-audit.md) - Compléter ou supprimer features incomplètes
+- [x] [O05 - Feature Audit](./O05-feature-audit.md) - Compléter ou supprimer features incomplètes
 
 ---
 
