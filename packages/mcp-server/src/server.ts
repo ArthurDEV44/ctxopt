@@ -34,6 +34,7 @@ import { smartFileReadTool } from "./tools/smart-file-read.js";
 import { deduplicateErrorsTool } from "./tools/deduplicate-errors.js";
 import { summarizeLogsTool } from "./tools/summarize-logs.js";
 import { autoOptimizeTool } from "./tools/auto-optimize.js";
+import { smartCacheTool } from "./tools/smart-cache-tool.js";
 
 // Utils
 import { detectProject } from "./utils/project-detector.js";
@@ -115,6 +116,7 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   tools.register(deduplicateErrorsTool);
   tools.register(summarizeLogsTool);
   tools.register(autoOptimizeTool);
+  tools.register(smartCacheTool);
 
   // Create MCP server
   const server = new Server(
