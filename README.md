@@ -111,11 +111,13 @@ bun run dev
 ```
 ctxopt/
 ├── apps/
-│   └── web/              # Next.js 16 application
+│   └── web/                  # Next.js 16 SaaS platform
 ├── packages/
-│   ├── shared/           # Shared types and utilities
-│   ├── mcp-server/       # MCP Server package
-│   └── ...
+│   ├── mcp-server/           # MCP Server for IDE integration
+│   ├── shared/               # Shared types, utils, constants
+│   ├── ui/                   # React component library
+│   ├── eslint-config/        # Shared ESLint configs
+│   └── typescript-config/    # Shared TypeScript configs
 ```
 
 ## Tech Stack
