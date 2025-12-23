@@ -2,8 +2,10 @@
 
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSuggestions } from "@/lib/hooks/useUsage";
+import { useUsageStats, useAllProjectsUsage } from "@/lib/hooks/useUsageStats";
 import { QuickActions } from "./QuickActions";
 import { SuggestionsPreview } from "./SuggestionsPreview";
+import { StatsCards } from "./StatsCards";
 import { ScopeSelector } from "@/components/dashboard/scope-selector";
 import Link from "next/link";
 
@@ -26,6 +28,14 @@ export function DashboardContent({ userName }: DashboardContentProps) {
     router.push(`/dashboard?${params.toString()}`);
   };
 
+  // Fetch usage stats based on scope
+  const allProjectsUsage = useAllProjectsUsage();
+  const singleProjectUsage = useUsageStats({
+    projectId: scope !== "all" ? scope : "",
+  });
+
+  const usageStats = scope === "all" ? allProjectsUsage : singleProjectUsage;
+
   const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions({
     status: "active",
     limit: 5,
@@ -41,6 +51,15 @@ export function DashboardContent({ userName }: DashboardContentProps) {
         </div>
         <ScopeSelector value={scope} onChange={handleScopeChange} />
       </div>
+
+      {/* Stats Cards */}
+      <StatsCards
+        tokensUsed={usageStats.stats?.totalTokensUsed ?? 0}
+        tokensSaved={usageStats.stats?.totalTokensSaved ?? 0}
+        estimatedCostMicros={usageStats.stats?.totalCostMicros ?? 0}
+        savingsPercent={usageStats.stats?.totalSavingsPercent ?? 0}
+        isLoading={usageStats.isLoading}
+      />
 
       {/* Quick Actions */}
       <QuickActions />

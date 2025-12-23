@@ -3,11 +3,10 @@
 import { formatNumber, formatCost } from "@ctxopt/shared";
 
 interface StatsCardsProps {
-  totalTokens: number;
-  totalCostMicros: number;
-  totalRequests: number;
-  potentialSavingsMicros: number;
-  tokenLimit: number;
+  tokensUsed: number;
+  tokensSaved: number;
+  estimatedCostMicros: number;
+  savingsPercent: number;
   isLoading?: boolean;
 }
 
@@ -21,12 +20,33 @@ function StatCardSkeleton() {
   );
 }
 
+function getSavingsRateBadge(percent: number) {
+  if (percent >= 30) {
+    return {
+      color: "text-green-600",
+      bgColor: "bg-green-100 dark:bg-green-900/30",
+      label: "Excellent",
+    };
+  }
+  if (percent >= 10) {
+    return {
+      color: "text-yellow-600",
+      bgColor: "bg-yellow-100 dark:bg-yellow-900/30",
+      label: "Good",
+    };
+  }
+  return {
+    color: "text-muted-foreground",
+    bgColor: "bg-muted",
+    label: "Low",
+  };
+}
+
 export function StatsCards({
-  totalTokens,
-  totalCostMicros,
-  totalRequests,
-  potentialSavingsMicros,
-  tokenLimit,
+  tokensUsed,
+  tokensSaved,
+  estimatedCostMicros,
+  savingsPercent,
   isLoading = false,
 }: StatsCardsProps) {
   if (isLoading) {
@@ -40,31 +60,52 @@ export function StatsCards({
     );
   }
 
+  const badge = getSavingsRateBadge(savingsPercent);
+
   return (
     <div className="grid gap-4 md:grid-cols-4">
+      {/* Tokens Used */}
       <div className="rounded-lg border p-6">
         <p className="text-sm text-muted-foreground">Tokens Used</p>
-        <p className="text-3xl font-bold">{formatNumber(totalTokens)}</p>
-        <p className="text-xs text-muted-foreground">
-          of {formatNumber(tokenLimit)} this month
-        </p>
+        <p className="text-3xl font-bold">{formatNumber(tokensUsed)}</p>
+        <p className="text-xs text-muted-foreground">input + output</p>
       </div>
+
+      {/* Tokens Saved */}
       <div className="rounded-lg border p-6">
-        <p className="text-sm text-muted-foreground">Estimated Cost</p>
-        <p className="text-3xl font-bold">{formatCost(totalCostMicros)}</p>
-        <p className="text-xs text-muted-foreground">this month</p>
-      </div>
-      <div className="rounded-lg border p-6">
-        <p className="text-sm text-muted-foreground">Requests</p>
-        <p className="text-3xl font-bold">{formatNumber(totalRequests)}</p>
-        <p className="text-xs text-muted-foreground">this month</p>
-      </div>
-      <div className="rounded-lg border p-6">
-        <p className="text-sm text-muted-foreground">Potential Savings</p>
+        <p className="text-sm text-muted-foreground">Tokens Saved</p>
         <p className="text-3xl font-bold text-green-600">
-          {formatCost(potentialSavingsMicros)}
+          {formatNumber(tokensSaved)}
         </p>
-        <p className="text-xs text-muted-foreground">based on suggestions</p>
+        <p className="text-xs text-muted-foreground">via MCP tools</p>
+      </div>
+
+      {/* Estimated Cost */}
+      <div className="rounded-lg border p-6">
+        <p className="text-sm text-muted-foreground">Est. Cost</p>
+        <p className="text-3xl font-bold">{formatCost(estimatedCostMicros)}</p>
+        <p className="text-xs text-muted-foreground">this period</p>
+      </div>
+
+      {/* Savings Rate */}
+      <div className="rounded-lg border p-6">
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">Savings Rate</p>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full ${badge.bgColor} ${badge.color}`}
+          >
+            {badge.label}
+          </span>
+        </div>
+        <p className={`text-3xl font-bold ${badge.color}`}>
+          {savingsPercent.toFixed(1)}%
+        </p>
+        <div className="mt-2 h-2 w-full bg-muted rounded-full overflow-hidden">
+          <div
+            className={`h-full ${savingsPercent >= 30 ? "bg-green-500" : savingsPercent >= 10 ? "bg-yellow-500" : "bg-gray-400"}`}
+            style={{ width: `${Math.min(savingsPercent, 100)}%` }}
+          />
+        </div>
       </div>
     </div>
   );

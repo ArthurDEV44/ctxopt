@@ -41,10 +41,10 @@ Métriques disponibles via `/api/usage`:
 - [x] URL param pour bookmarker la vue (`?project=xxx`)
 
 #### 1.2 Hero Stats Cards (4 cards)
-- [ ] **Tokens Used** : total tokens (input + output), trend vs période précédente
-- [ ] **Tokens Saved** : économies grâce aux outils MCP
-- [ ] **Est. Cost** : coût estimé en $ (basé sur pricing models)
-- [ ] **Savings Rate** : % d'économies (avec badge visuel)
+- [x] **Tokens Used** : total tokens (input + output)
+- [x] **Tokens Saved** : économies grâce aux outils MCP
+- [x] **Est. Cost** : coût estimé en $ (basé sur pricing models)
+- [x] **Savings Rate** : % d'économies (avec badge visuel)
 
 #### 1.3 Section Charts (fusion Analytics)
 - [ ] **Usage Over Time** : line chart tokens par jour/semaine
