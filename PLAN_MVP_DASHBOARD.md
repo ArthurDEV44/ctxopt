@@ -37,8 +37,8 @@ Métriques disponibles via `/api/usage`:
 
 #### 1.1 Sélecteur de Scope
 - [x] Toggle "All Projects" / "Project: [name]"
-- [ ] Dropdown pour sélectionner un projet spécifique
-- [ ] URL param pour bookmarker la vue (`?project=xxx`)
+- [x] Dropdown pour sélectionner un projet spécifique
+- [x] URL param pour bookmarker la vue (`?project=xxx`)
 
 #### 1.2 Hero Stats Cards (4 cards)
 - [ ] **Tokens Used** : total tokens (input + output), trend vs période précédente
