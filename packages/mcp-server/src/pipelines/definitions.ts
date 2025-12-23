@@ -109,6 +109,21 @@ export const PIPELINE_DEFINITIONS: Record<PipelineContentType, PipelineDefinitio
 /**
  * Detection patterns for extended content types
  */
+
+/**
+ * Log patterns - check BEFORE build patterns to avoid false positives
+ * Logs typically have timestamps and log levels (INFO, WARN, ERROR, DEBUG)
+ */
+const LOG_PATTERNS = [
+  /^\[\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/m, // [2025-12-23 10:15:23] or [2025-12-23T10:15:23]
+  /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/m, // 2025-12-23 10:15:23 (no brackets)
+  /^\[\w+\]\s+(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)[\s:]/im, // [tag] INFO: or [tag] ERROR
+  /^(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)[\s:\[]/im, // INFO: or ERROR[ at start
+  /^\d{2}:\d{2}:\d{2}\.\d{3}\s+(INFO|WARN|ERROR|DEBUG)/im, // 10:15:23.456 INFO
+  /^time="[^"]+"\s+level=/m, // Structured logging (logrus style)
+  /^{"(level|time|timestamp|msg)":/m, // JSON structured logs
+];
+
 const BUILD_PATTERNS = [
   /error TS\d+:/i, // TypeScript
   /error\[E\d+\]:/i, // Rust
@@ -118,7 +133,8 @@ const BUILD_PATTERNS = [
   /Build failed/i, // Generic build
   /FAILED:/i, // Test failures
   /npm ERR!/i, // npm
-  /error: /i, // Generic errors
+  /\(\d+,\d+\):\s*error/i, // file(line,col): error (TypeScript/C#)
+  /:\d+:\d+:\s*error:/i, // file:line:col: error: (GCC/Clang)
 ];
 
 const DIFF_PATTERNS = [
@@ -135,6 +151,11 @@ export function detectPipelineContentType(content: string): PipelineContentType 
   // Check for diff first (very specific pattern)
   if (DIFF_PATTERNS.some((p) => p.test(content))) {
     return "diff";
+  }
+
+  // Check for logs BEFORE build (logs have timestamps/levels that are more specific)
+  if (LOG_PATTERNS.some((p) => p.test(content))) {
+    return "logs";
   }
 
   // Check for build output (errors with specific formats)
