@@ -36,6 +36,7 @@ import { summarizeLogsTool } from "./tools/summarize-logs.js";
 import { autoOptimizeTool } from "./tools/auto-optimize.js";
 import { smartCacheTool } from "./tools/smart-cache-tool.js";
 import { semanticCompressTool } from "./tools/semantic-compress.js";
+import { contextBudgetTool } from "./tools/context-budget.js";
 
 // Utils
 import { detectProject } from "./utils/project-detector.js";
@@ -119,6 +120,7 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   tools.register(autoOptimizeTool);
   tools.register(smartCacheTool);
   tools.register(semanticCompressTool);
+  tools.register(contextBudgetTool);
 
   // Create MCP server
   const server = new Server(
