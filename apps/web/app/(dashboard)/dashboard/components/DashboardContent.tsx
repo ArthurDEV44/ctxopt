@@ -1,8 +1,10 @@
 "use client";
 
+import { useSearchParams, useRouter } from "next/navigation";
 import { useSuggestions } from "@/lib/hooks/useUsage";
 import { QuickActions } from "./QuickActions";
 import { SuggestionsPreview } from "./SuggestionsPreview";
+import { ScopeSelector } from "@/components/dashboard/scope-selector";
 import Link from "next/link";
 
 interface DashboardContentProps {
@@ -10,6 +12,20 @@ interface DashboardContentProps {
 }
 
 export function DashboardContent({ userName }: DashboardContentProps) {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const scope = searchParams.get("project") ?? "all";
+
+  const handleScopeChange = (newScope: string) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (newScope === "all") {
+      params.delete("project");
+    } else {
+      params.set("project", newScope);
+    }
+    router.push(`/dashboard?${params.toString()}`);
+  };
+
   const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions({
     status: "active",
     limit: 5,
@@ -18,9 +34,12 @@ export function DashboardContent({ userName }: DashboardContentProps) {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back, {userName}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <p className="text-muted-foreground">Welcome back, {userName}</p>
+        </div>
+        <ScopeSelector value={scope} onChange={handleScopeChange} />
       </div>
 
       {/* Quick Actions */}
