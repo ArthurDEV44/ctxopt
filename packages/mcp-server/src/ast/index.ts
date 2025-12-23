@@ -30,7 +30,7 @@ import { createEmptyStructure } from "./types.js";
 import { typescriptParser, parseTypeScript } from "./typescript.js";
 import { pythonTreeSitterParser } from "./python/index.js";
 import { goTreeSitterParser } from "./go/index.js";
-import { rustParser } from "./regex-parser.js";
+import { rustTreeSitterParser } from "./rust/index.js";
 
 /**
  * Registry of language parsers
@@ -40,7 +40,7 @@ const parserRegistry: Map<SupportedLanguage, LanguageParser> = new Map([
   ["javascript", typescriptParser], // JS uses same parser
   ["python", pythonTreeSitterParser], // Tree-sitter based parser
   ["go", goTreeSitterParser], // Tree-sitter based parser
-  ["rust", rustParser],
+  ["rust", rustTreeSitterParser], // Tree-sitter based parser
 ]);
 
 /**
