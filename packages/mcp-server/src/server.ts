@@ -38,6 +38,7 @@ import { smartCacheTool } from "./tools/smart-cache-tool.js";
 import { semanticCompressTool } from "./tools/semantic-compress.js";
 import { contextBudgetTool } from "./tools/context-budget.js";
 import { codeSkeletonTool } from "./tools/code-skeleton.js";
+import { conversationCompressTool } from "./tools/conversation-compress.js";
 
 // Utils
 import { detectProject } from "./utils/project-detector.js";
@@ -123,6 +124,7 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   tools.register(semanticCompressTool);
   tools.register(contextBudgetTool);
   tools.register(codeSkeletonTool);
+  tools.register(conversationCompressTool);
 
   // Create MCP server
   const server = new Server(

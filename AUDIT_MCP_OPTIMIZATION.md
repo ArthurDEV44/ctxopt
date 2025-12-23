@@ -863,7 +863,7 @@ interface SmartFileReadV2Input {
 
 | Tâche | Priorité | Effort | Impact |
 |-------|----------|--------|--------|
-| Implémenter `conversation-compress` | Moyenne | 4 jours | Conversations longues |
+| Implémenter `conversation-compress` | Moyenne | 4 jours | Conversations longues | **FAIT** |
 | Implémenter `diff-compress` | Basse | 2 jours | Git diffs |
 | Pipeline automatique | Moyenne | 3 jours | Chaînage intelligent |
 | Dashboard métriques avancées | Basse | 3 jours | Visibilité |
