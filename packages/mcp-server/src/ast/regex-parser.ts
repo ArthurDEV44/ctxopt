@@ -1,9 +1,9 @@
 /**
- * Regex-based Parser for Go, Rust
+ * Regex-based Parser for Rust
  *
  * Fallback parser using regex patterns for languages
  * where full AST parsing would require native bindings.
- * Note: Python has been moved to tree-sitter in ./python/
+ * Note: Python and Go have been moved to tree-sitter in ./python/ and ./go/
  */
 
 import type {
@@ -26,7 +26,7 @@ function getLineFromIndex(content: string, index: number): number {
 }
 
 /**
- * Find the end of a brace-delimited block (Go, Rust)
+ * Find the end of a brace-delimited block (Rust)
  */
 function findBraceBlockEnd(content: string, startIndex: number): number {
   let braceCount = 0;
@@ -72,94 +72,6 @@ function findBraceBlockEnd(content: string, startIndex: number): number {
   }
 
   return content.length - 1;
-}
-
-// ============================================================================
-// Go Parser
-// ============================================================================
-
-const GO_IMPORT_PATTERN = /^import\s+(?:\(\s*([^)]+)\s*\)|"([^"]+)")/gm;
-const GO_FUNCTION_PATTERN = /^func\s+(?:\([^)]+\)\s+)?(\w+)\s*\([^)]*\)[^{]*\{/gm;
-const GO_TYPE_PATTERN = /^type\s+(\w+)\s+(?:struct|interface)\s*\{/gm;
-
-function extractGoDoc(lines: string[], startLine: number): string | undefined {
-  const comments: string[] = [];
-  for (let i = startLine - 2; i >= 0; i--) {
-    const line = lines[i]?.trim();
-    if (line?.startsWith("//")) {
-      comments.unshift(line.slice(2).trim());
-    } else if (line === "") {
-      continue;
-    } else {
-      break;
-    }
-  }
-  return comments.length > 0 ? comments.join("\n") : undefined;
-}
-
-export function parseGo(content: string): FileStructure {
-  const lines = content.split("\n");
-  const structure = createEmptyStructure("go", lines.length);
-
-  // Parse imports
-  let match;
-  while ((match = GO_IMPORT_PATTERN.exec(content)) !== null) {
-    const lineNum = getLineFromIndex(content, match.index);
-    const imports = match[1] ?? match[2] ?? "";
-
-    // Handle grouped imports
-    const importLines = imports.split("\n").filter((l) => l.trim());
-    for (const imp of importLines) {
-      const cleaned = imp.replace(/["]/g, "").trim();
-      if (cleaned) {
-        structure.imports.push({
-          type: "import",
-          name: cleaned.split("/").pop() ?? cleaned,
-          startLine: lineNum,
-          endLine: lineNum,
-          signature: `import "${cleaned}"`,
-        });
-      }
-    }
-  }
-
-  // Parse functions
-  GO_FUNCTION_PATTERN.lastIndex = 0;
-  while ((match = GO_FUNCTION_PATTERN.exec(content)) !== null) {
-    const startLine = getLineFromIndex(content, match.index);
-    const endIndex = findBraceBlockEnd(content, match.index + match[0].length - 1);
-    const endLine = getLineFromIndex(content, endIndex);
-    const name = match[1] ?? "";
-
-    structure.functions.push({
-      type: "function",
-      name,
-      startLine,
-      endLine,
-      signature: `func ${name}(...)`,
-      documentation: extractGoDoc(lines, startLine),
-    });
-  }
-
-  // Parse types (struct/interface)
-  GO_TYPE_PATTERN.lastIndex = 0;
-  while ((match = GO_TYPE_PATTERN.exec(content)) !== null) {
-    const startLine = getLineFromIndex(content, match.index);
-    const endIndex = findBraceBlockEnd(content, match.index + match[0].length - 1);
-    const endLine = getLineFromIndex(content, endIndex);
-    const name = match[1] ?? "";
-
-    structure.types.push({
-      type: "type",
-      name,
-      startLine,
-      endLine,
-      signature: match[0].replace(/\s*\{$/, ""),
-      documentation: extractGoDoc(lines, startLine),
-    });
-  }
-
-  return structure;
 }
 
 // ============================================================================
@@ -409,28 +321,6 @@ function searchElements(structure: FileStructure, query: string): CodeElement[] 
 // ============================================================================
 // Language Parsers
 // ============================================================================
-
-export const goParser: LanguageParser = {
-  languages: ["go"],
-
-  parse(content: string): FileStructure {
-    return parseGo(content);
-  },
-
-  extractElement(
-    content: string,
-    target: ExtractionTarget,
-    options: ExtractionOptions
-  ): ExtractedContent | null {
-    const structure = parseGo(content);
-    return extractElement(content, structure, target, options);
-  },
-
-  searchElements(content: string, query: string): CodeElement[] {
-    const structure = parseGo(content);
-    return searchElements(structure, query);
-  },
-};
 
 export const rustParser: LanguageParser = {
   languages: ["rust"],
