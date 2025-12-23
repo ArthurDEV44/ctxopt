@@ -60,10 +60,10 @@ Métriques disponibles via `/api/usage`:
 **Dossier:** `apps/web/components/dashboard/`
 
 #### 2.1 Nouveaux Composants
-- [ ] `scope-selector.tsx` - Toggle global/projet + dropdown
-- [ ] `usage-chart.tsx` - Chart unifié (remplace TokensChart)
-- [ ] `model-breakdown.tsx` - Pie chart simplifié
-- [ ] `sessions-table.tsx` - Tableau sessions récentes
+- [x] `scope-selector.tsx` - Toggle global/projet + dropdown
+- [x] `usage-chart.tsx` - Chart unifié (remplace TokensChart)
+- [x] `model-breakdown.tsx` - Pie chart simplifié
+- [x] `sessions-table.tsx` - Tableau sessions récentes
 
 #### 2.2 Refonte Composants Existants
 - [ ] `stats-cards.tsx` - Simplifier à 4 cards essentielles

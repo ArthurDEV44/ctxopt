@@ -9,7 +9,7 @@ interface ModelData {
   costMicros: number;
 }
 
-interface CostBreakdownProps {
+interface ModelBreakdownProps {
   data: Record<string, ModelData>;
   isLoading?: boolean;
 }
@@ -39,7 +39,7 @@ function ChartSkeleton() {
   );
 }
 
-export function CostBreakdown({ data, isLoading = false }: CostBreakdownProps) {
+export function ModelBreakdown({ data, isLoading = false }: ModelBreakdownProps) {
   if (isLoading) {
     return (
       <div className="rounded-lg border p-6">

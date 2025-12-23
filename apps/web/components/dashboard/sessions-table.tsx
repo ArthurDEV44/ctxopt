@@ -9,7 +9,16 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatNumber, formatCost } from "@ctxopt/shared";
-import type { Session } from "@/lib/hooks/useSessions";
+
+export interface Session {
+  id: string;
+  date: string;
+  tokensUsed: number;
+  tokensSaved: number;
+  savingsPercent: number;
+  costMicros: number;
+  model: string | null;
+}
 
 interface SessionsTableProps {
   sessions: Session[];

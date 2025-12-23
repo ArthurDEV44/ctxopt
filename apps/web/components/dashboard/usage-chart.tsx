@@ -19,7 +19,7 @@ interface DailyData {
   requests: number;
 }
 
-interface TokensChartProps {
+interface UsageChartProps {
   data: DailyData[];
   isLoading?: boolean;
 }
@@ -38,7 +38,7 @@ function ChartSkeleton() {
   );
 }
 
-export function TokensChart({ data, isLoading = false }: TokensChartProps) {
+export function UsageChart({ data, isLoading = false }: UsageChartProps) {
   const [metric, setMetric] = useState<MetricType>("tokens");
 
   if (isLoading) {

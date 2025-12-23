@@ -7,10 +7,12 @@ import { useSessions, useAllProjectsSessions } from "@/lib/hooks/useSessions";
 import { QuickActions } from "./QuickActions";
 import { SuggestionsPreview } from "./SuggestionsPreview";
 import { StatsCards } from "./StatsCards";
-import { SessionsTable } from "./SessionsTable";
-import { ScopeSelector } from "@/components/dashboard/scope-selector";
-import { TokensChart } from "../analytics/components/TokensChart";
-import { CostBreakdown } from "../analytics/components/CostBreakdown";
+import {
+  ScopeSelector,
+  UsageChart,
+  ModelBreakdown,
+  SessionsTable,
+} from "@/components/dashboard";
 import Link from "next/link";
 import type { UsagePeriod } from "@ctxopt/shared";
 
@@ -103,11 +105,11 @@ export function DashboardContent({ userName }: DashboardContentProps) {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2">
-          <TokensChart
+          <UsageChart
             data={usageStats.stats?.dailyData ?? []}
             isLoading={usageStats.isLoading}
           />
-          <CostBreakdown
+          <ModelBreakdown
             data={usageStats.stats?.modelBreakdown ?? {}}
             isLoading={usageStats.isLoading}
           />
