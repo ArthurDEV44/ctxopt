@@ -7,7 +7,16 @@ import { QuickActions } from "./QuickActions";
 import { SuggestionsPreview } from "./SuggestionsPreview";
 import { StatsCards } from "./StatsCards";
 import { ScopeSelector } from "@/components/dashboard/scope-selector";
+import { TokensChart } from "../analytics/components/TokensChart";
+import { CostBreakdown } from "../analytics/components/CostBreakdown";
 import Link from "next/link";
+import type { UsagePeriod } from "@ctxopt/shared";
+
+const PERIODS: { value: UsagePeriod; label: string }[] = [
+  { value: "7d", label: "7 days" },
+  { value: "30d", label: "30 days" },
+  { value: "90d", label: "90 days" },
+];
 
 interface DashboardContentProps {
   userName: string;
@@ -60,6 +69,39 @@ export function DashboardContent({ userName }: DashboardContentProps) {
         savingsPercent={usageStats.stats?.totalSavingsPercent ?? 0}
         isLoading={usageStats.isLoading}
       />
+
+      {/* Usage Analytics Section */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-semibold">Usage Analytics</h2>
+          <div className="flex gap-1 rounded-lg border p-1">
+            {PERIODS.map((p) => (
+              <button
+                key={p.value}
+                onClick={() => usageStats.setPeriod(p.value)}
+                className={`px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  usageStats.period === p.value
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-2">
+          <TokensChart
+            data={usageStats.stats?.dailyData ?? []}
+            isLoading={usageStats.isLoading}
+          />
+          <CostBreakdown
+            data={usageStats.stats?.modelBreakdown ?? {}}
+            isLoading={usageStats.isLoading}
+          />
+        </div>
+      </div>
 
       {/* Quick Actions */}
       <QuickActions />

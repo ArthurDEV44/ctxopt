@@ -1,8 +1,14 @@
 import { auth } from "@clerk/nextjs/server";
 import { db } from "@/lib/db";
 import { projects, users, usageRecords } from "@/lib/db/schema";
-import { eq, and, gte, count, sum } from "drizzle-orm";
-import { UsagePeriodEnum, type UsageStats, type ToolBreakdown } from "@ctxopt/shared";
+import { eq, and, gte, count, sum, sql } from "drizzle-orm";
+import {
+  UsagePeriodEnum,
+  type UsageStats,
+  type ToolBreakdown,
+  type DailyData,
+  type ModelBreakdown,
+} from "@ctxopt/shared";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
@@ -163,7 +169,59 @@ export async function GET(request: Request, context: RouteContext) {
       topTools,
     };
 
-    return Response.json({ stats, period });
+    // Daily aggregation for charts
+    const dailyResult = await db
+      .select({
+        date: sql<string>`DATE(${usageRecords.createdAt})`.as("date"),
+        tokens: sum(usageRecords.tokensUsed),
+        costMicros: sum(usageRecords.estimatedCostMicros),
+        requests: count(),
+      })
+      .from(usageRecords)
+      .where(
+        and(
+          eq(usageRecords.projectId, projectId),
+          gte(usageRecords.createdAt, startDate)
+        )
+      )
+      .groupBy(sql`DATE(${usageRecords.createdAt})`)
+      .orderBy(sql`DATE(${usageRecords.createdAt})`);
+
+    const dailyData: DailyData[] = dailyResult.map((row) => ({
+      date: row.date,
+      tokens: Number(row.tokens) || 0,
+      costMicros: Number(row.costMicros) || 0,
+      requests: row.requests,
+    }));
+
+    // Model breakdown for pie chart
+    const modelResult = await db
+      .select({
+        model: usageRecords.model,
+        requests: count(),
+        tokens: sum(usageRecords.tokensUsed),
+        costMicros: sum(usageRecords.estimatedCostMicros),
+      })
+      .from(usageRecords)
+      .where(
+        and(
+          eq(usageRecords.projectId, projectId),
+          gte(usageRecords.createdAt, startDate)
+        )
+      )
+      .groupBy(usageRecords.model);
+
+    const modelBreakdown: ModelBreakdown = {};
+    for (const row of modelResult) {
+      const modelName = row.model || "unknown";
+      modelBreakdown[modelName] = {
+        requests: row.requests,
+        tokens: Number(row.tokens) || 0,
+        costMicros: Number(row.costMicros) || 0,
+      };
+    }
+
+    return Response.json({ stats, period, dailyData, modelBreakdown });
   } catch (error) {
     console.error("Error fetching usage stats:", error);
     return Response.json(

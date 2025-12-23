@@ -4,7 +4,6 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recha
 import { formatCost } from "@ctxopt/shared";
 
 interface ModelData {
-  model: string;
   requests: number;
   tokens: number;
   costMicros: number;

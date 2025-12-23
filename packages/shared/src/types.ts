@@ -211,3 +211,34 @@ export type UsageStats = z.infer<typeof UsageStatsSchema>;
 export const UsagePeriodEnum = z.enum(["7d", "30d", "90d", "365d"]);
 
 export type UsagePeriod = z.infer<typeof UsagePeriodEnum>;
+
+// ============================================
+// Chart Data Types (Dashboard Charts)
+// ============================================
+
+export const DailyDataSchema = z.object({
+  date: z.string(), // "2024-01-15"
+  tokens: z.number().int().min(0),
+  costMicros: z.number().int().min(0),
+  requests: z.number().int().min(0),
+});
+
+export type DailyData = z.infer<typeof DailyDataSchema>;
+
+export const ModelBreakdownSchema = z.record(
+  z.string(),
+  z.object({
+    requests: z.number().int().min(0),
+    tokens: z.number().int().min(0),
+    costMicros: z.number().int().min(0),
+  })
+);
+
+export type ModelBreakdown = z.infer<typeof ModelBreakdownSchema>;
+
+export const UsageStatsWithChartsSchema = UsageStatsSchema.extend({
+  dailyData: z.array(DailyDataSchema),
+  modelBreakdown: ModelBreakdownSchema,
+});
+
+export type UsageStatsWithCharts = z.infer<typeof UsageStatsWithChartsSchema>;

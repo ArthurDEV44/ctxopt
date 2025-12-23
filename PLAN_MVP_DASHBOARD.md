@@ -47,9 +47,9 @@ Métriques disponibles via `/api/usage`:
 - [x] **Savings Rate** : % d'économies (avec badge visuel)
 
 #### 1.3 Section Charts (fusion Analytics)
-- [ ] **Usage Over Time** : line chart tokens par jour/semaine
-- [ ] **Cost by Model** : pie chart répartition par modèle
-- [ ] Période sélectionnable : 7d / 30d / 90d
+- [x] **Usage Over Time** : line chart tokens par jour/semaine
+- [x] **Cost by Model** : pie chart répartition par modèle
+- [x] Période sélectionnable : 7d / 30d / 90d
 
 #### 1.4 Table Détails
 - [ ] Tableau des sessions récentes (date, tokens, savings, model)

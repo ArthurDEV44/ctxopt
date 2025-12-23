@@ -1,7 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { UsageStats, UsagePeriod } from "@ctxopt/shared";
+import type {
+  UsageStats,
+  UsagePeriod,
+  DailyData,
+  ModelBreakdown,
+} from "@ctxopt/shared";
+
+interface UsageStatsWithCharts extends UsageStats {
+  dailyData: DailyData[];
+  modelBreakdown: ModelBreakdown;
+}
 
 interface UseUsageStatsOptions {
   projectId: string;
@@ -9,7 +19,7 @@ interface UseUsageStatsOptions {
 }
 
 interface UseUsageStatsResult {
-  stats: UsageStats | null;
+  stats: UsageStatsWithCharts | null;
   period: UsagePeriod;
   isLoading: boolean;
   error: string | null;
@@ -21,7 +31,7 @@ export function useUsageStats({
   projectId,
   period: initialPeriod = "30d",
 }: UseUsageStatsOptions): UseUsageStatsResult {
-  const [stats, setStats] = useState<UsageStats | null>(null);
+  const [stats, setStats] = useState<UsageStatsWithCharts | null>(null);
   const [period, setPeriod] = useState<UsagePeriod>(initialPeriod);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +47,11 @@ export function useUsageStats({
       }
 
       const data = await response.json();
-      setStats(data.stats);
+      setStats({
+        ...data.stats,
+        dailyData: data.dailyData ?? [],
+        modelBreakdown: data.modelBreakdown ?? {},
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "An error occurred");
     } finally {
@@ -68,6 +82,8 @@ interface UseAllProjectsUsageOptions {
 
 interface AllProjectsUsageStats extends UsageStats {
   projectCount: number;
+  dailyData: DailyData[];
+  modelBreakdown: ModelBreakdown;
 }
 
 interface UseAllProjectsUsageResult {
@@ -109,6 +125,8 @@ export function useAllProjectsUsage({
           totalCommands: 0,
           topTools: [],
           projectCount: 0,
+          dailyData: [],
+          modelBreakdown: {},
         });
         return;
       }
@@ -135,12 +153,18 @@ export function useAllProjectsUsage({
         totalCommands: 0,
         topTools: [],
         projectCount: projects.length,
+        dailyData: [],
+        modelBreakdown: {},
       };
 
       const toolsMap = new Map<
         string,
         { calls: number; tokensSaved: number; savingsPercent: number }
       >();
+
+      // Maps for aggregating chart data
+      const dailyMap = new Map<string, DailyData>();
+      const modelMap = new Map<string, { requests: number; tokens: number; costMicros: number }>();
 
       for (const result of validResults) {
         const s = result.stats as UsageStats;
@@ -165,6 +189,32 @@ export function useAllProjectsUsage({
             });
           }
         }
+
+        // Aggregate daily data
+        const dailyData = (result.dailyData ?? []) as DailyData[];
+        for (const day of dailyData) {
+          const existing = dailyMap.get(day.date);
+          if (existing) {
+            existing.tokens += day.tokens;
+            existing.costMicros += day.costMicros;
+            existing.requests += day.requests;
+          } else {
+            dailyMap.set(day.date, { ...day });
+          }
+        }
+
+        // Aggregate model breakdown
+        const modelBreakdown = (result.modelBreakdown ?? {}) as ModelBreakdown;
+        for (const [model, data] of Object.entries(modelBreakdown)) {
+          const existing = modelMap.get(model);
+          if (existing) {
+            existing.requests += data.requests;
+            existing.tokens += data.tokens;
+            existing.costMicros += data.costMicros;
+          } else {
+            modelMap.set(model, { ...data });
+          }
+        }
       }
 
       // Calculate overall savings percent
@@ -185,6 +235,14 @@ export function useAllProjectsUsage({
         }))
         .sort((a, b) => b.tokensSaved - a.tokensSaved)
         .slice(0, 10);
+
+      // Convert daily data to sorted array
+      aggregated.dailyData = Array.from(dailyMap.values()).sort((a, b) =>
+        a.date.localeCompare(b.date)
+      );
+
+      // Convert model breakdown to record
+      aggregated.modelBreakdown = Object.fromEntries(modelMap);
 
       setStats(aggregated);
     } catch (err) {
