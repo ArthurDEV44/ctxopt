@@ -200,9 +200,9 @@ export const semanticCompressor: Compressor = {
   supportedTypes: ["generic", "code", "logs"],
 
   canCompress(content: string): boolean {
-    // Can compress any content, but most effective on longer content
-    // Short content (<500 chars) has little room for meaningful compression
-    return content.length > 200;
+    // Can compress any content with at least some substance
+    // Very short content (<100 chars) has no room for meaningful compression
+    return content.length >= 100;
   },
 
   compress(
@@ -212,8 +212,9 @@ export const semanticCompressor: Compressor = {
     const originalTokens = countTokens(content);
     const targetRatio = options.targetRatio ?? 0.5;
 
-    // If content is already small, return as-is
-    if (originalTokens < 100) {
+    // If content is already very small, return as-is
+    // Below 50 tokens, compression would likely make content worse
+    if (originalTokens < 50) {
       return {
         compressed: content,
         stats: {
@@ -222,7 +223,7 @@ export const semanticCompressor: Compressor = {
           originalTokens,
           compressedTokens: originalTokens,
           reductionPercent: 0,
-          technique: "semantic-compression (no-op: content too small)",
+          technique: "semantic-compression (no-op: content already optimized, <50 tokens)",
         },
         preservedSegments: [],
       };
@@ -233,7 +234,7 @@ export const semanticCompressor: Compressor = {
     // Step 1: Segment content
     const segments = segmentContent(content);
 
-    // If we only have one segment, can't compress further
+    // If we only have one segment, can't compress further meaningfully
     if (segments.length <= 1) {
       return {
         compressed: content,
@@ -243,7 +244,7 @@ export const semanticCompressor: Compressor = {
           originalTokens,
           compressedTokens: originalTokens,
           reductionPercent: 0,
-          technique: "semantic-compression (no-op: single segment)",
+          technique: "semantic-compression (no-op: atomic content, cannot segment)",
         },
         preservedSegments: [],
       };

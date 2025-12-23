@@ -111,30 +111,41 @@ export const PIPELINE_DEFINITIONS: Record<PipelineContentType, PipelineDefinitio
  */
 
 /**
- * Log patterns - check BEFORE build patterns to avoid false positives
- * Logs typically have timestamps and log levels (INFO, WARN, ERROR, DEBUG)
+ * Log patterns - used for scoring log-like content
+ * These patterns match individual lines, not the whole content
  */
-const LOG_PATTERNS = [
-  /^\[\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/m, // [2025-12-23 10:15:23] or [2025-12-23T10:15:23]
-  /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/m, // 2025-12-23 10:15:23 (no brackets)
-  /^\[\w+\]\s+(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)[\s:]/im, // [tag] INFO: or [tag] ERROR
-  /^(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)[\s:\[]/im, // INFO: or ERROR[ at start
-  /^\d{2}:\d{2}:\d{2}\.\d{3}\s+(INFO|WARN|ERROR|DEBUG)/im, // 10:15:23.456 INFO
-  /^time="[^"]+"\s+level=/m, // Structured logging (logrus style)
-  /^{"(level|time|timestamp|msg)":/m, // JSON structured logs
+const LOG_LINE_PATTERNS = [
+  /^\[\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/, // [2025-12-23 10:15:23]
+  /^\d{4}-\d{2}-\d{2}[T\s]\d{2}:\d{2}:\d{2}/, // 2025-12-23 10:15:23
+  /^\[\w+\]\s+(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)[\s:]/i, // [tag] INFO:
+  /^(INFO|WARN|WARNING|ERROR|DEBUG|TRACE|FATAL)[\s:\[]/i, // INFO: at start
+  /^\d{2}:\d{2}:\d{2}[.,]\d{3}\s+(INFO|WARN|ERROR|DEBUG)/i, // 10:15:23.456 INFO
+  /^time="[^"]+"\s+level=/, // logrus style
+  /^{"(level|time|timestamp|msg)":/, // JSON logs
+  /^\[[A-Z]+\]\s*\d{4}-\d{2}-\d{2}/, // [INFO] 2025-12-23
+  /^\w{3}\s+\d{1,2}\s+\d{2}:\d{2}:\d{2}/, // syslog: Dec 23 10:15:23
+  /^<\d+>/, // syslog priority
+  /\|\s*(INFO|WARN|ERROR|DEBUG|TRACE)\s*\|/i, // | INFO | format
 ];
 
-const BUILD_PATTERNS = [
-  /error TS\d+:/i, // TypeScript
-  /error\[E\d+\]:/i, // Rust
-  /SyntaxError:/i, // JavaScript
-  /ModuleNotFoundError:/i, // Python/Node
-  /Cannot find module/i, // Node
-  /Build failed/i, // Generic build
-  /FAILED:/i, // Test failures
-  /npm ERR!/i, // npm
-  /\(\d+,\d+\):\s*error/i, // file(line,col): error (TypeScript/C#)
-  /:\d+:\d+:\s*error:/i, // file:line:col: error: (GCC/Clang)
+/**
+ * Build error patterns - specific error formats from compilers/bundlers
+ * These are very specific to build tools, not general error messages
+ */
+const BUILD_LINE_PATTERNS = [
+  /error TS\d+:/i, // TypeScript: error TS2304
+  /error\[E\d+\]:/i, // Rust: error[E0425]
+  /:\d+:\d+:\s*error:/i, // GCC/Clang: file:10:5: error:
+  /\(\d+,\d+\):\s*error/i, // C#/TS: file(10,5): error
+  /npm ERR!/i, // npm specific
+  /ENOENT:|EACCES:|EPERM:/i, // Node.js errors
+  /Module not found.*Can't resolve/i, // Webpack
+  /SyntaxError:.*unexpected token/i, // Parse errors
+  /ModuleNotFoundError: No module named/i, // Python
+  /error: aborting due to/i, // Rust
+  /FAILURE: Build failed/i, // Gradle
+  /BUILD FAILED/i, // Ant/Maven
+  /error CS\d+:/i, // C# compiler
 ];
 
 const DIFF_PATTERNS = [
@@ -145,26 +156,73 @@ const DIFF_PATTERNS = [
 ];
 
 /**
+ * Count how many lines match any of the given patterns
+ */
+function countMatchingLines(lines: string[], patterns: RegExp[]): number {
+  let count = 0;
+  for (const line of lines) {
+    if (patterns.some((p) => p.test(line))) {
+      count++;
+    }
+  }
+  return count;
+}
+
+/**
  * Detect extended content type for pipeline selection
+ *
+ * Uses a scoring-based approach to handle content that might match multiple types.
+ * For example, server logs with errors should be detected as "logs" not "build".
  */
 export function detectPipelineContentType(content: string): PipelineContentType {
-  // Check for diff first (very specific pattern)
+  // Check for diff first (very specific pattern, no ambiguity)
   if (DIFF_PATTERNS.some((p) => p.test(content))) {
     return "diff";
   }
 
-  // Check for logs BEFORE build (logs have timestamps/levels that are more specific)
-  if (LOG_PATTERNS.some((p) => p.test(content))) {
+  // Split into lines for scoring
+  const lines = content.split("\n").filter((line) => line.trim().length > 0);
+  if (lines.length === 0) {
+    return "generic";
+  }
+
+  // Count matches for each type
+  const logMatches = countMatchingLines(lines, LOG_LINE_PATTERNS);
+  const buildMatches = countMatchingLines(lines, BUILD_LINE_PATTERNS);
+
+  // Calculate percentages
+  const logPercent = logMatches / lines.length;
+  const buildPercent = buildMatches / lines.length;
+
+  // If we have significant log patterns (>10% of lines), prefer logs
+  // This handles the case where logs contain some error messages
+  if (logPercent >= 0.1 && logMatches >= 2) {
+    // Even if there are some build-like patterns, if log patterns are dominant, it's logs
+    if (logMatches >= buildMatches || logPercent >= 0.2) {
+      return "logs";
+    }
+  }
+
+  // Strong build signal: specific compiler errors (even a few are significant)
+  if (buildMatches >= 1 && buildPercent >= 0.05) {
+    // Make sure it's not actually logs with some errors
+    // Build output typically has concentrated errors, not spread throughout
+    if (buildMatches > logMatches || logPercent < 0.1) {
+      return "build";
+    }
+  }
+
+  // Fallback: if we have any log patterns, treat as logs
+  if (logMatches > 0) {
     return "logs";
   }
 
-  // Check for build output (errors with specific formats)
-  if (BUILD_PATTERNS.some((p) => p.test(content))) {
+  // If we have build patterns but didn't trigger above, still treat as build
+  if (buildMatches > 0) {
     return "build";
   }
 
-  // Fall back to standard content detection
-  // Import dynamically to avoid circular deps
+  // Fall back to generic
   return "generic";
 }
 

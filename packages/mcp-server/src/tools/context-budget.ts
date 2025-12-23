@@ -44,7 +44,7 @@ export const contextBudgetSchema = {
       type: "number",
       description:
         "Optional maximum token budget. If set, will check if content fits within budget.",
-      minimum: 100,
+      minimum: 50,
     },
     includeEstimatedOutput: {
       type: "boolean",
@@ -68,7 +68,7 @@ const inputSchema = z.object({
     ])
     .optional()
     .default(DEFAULT_MODEL),
-  budgetTokens: z.number().min(100).optional(),
+  budgetTokens: z.number().min(50).optional(),
   includeEstimatedOutput: z.boolean().optional().default(true),
 });
 
