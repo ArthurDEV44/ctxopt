@@ -1,12 +1,11 @@
 import Link from "next/link";
 import { UserButton } from "@clerk/nextjs";
+import { LayoutDashboard, FolderKanban, BookOpen } from "lucide-react";
 
 const navigation = [
-  { name: "Overview", href: "/dashboard" },
-  { name: "Analytics", href: "/dashboard/analytics" },
-  { name: "Projects", href: "/dashboard/projects" },
-  { name: "API Keys", href: "/dashboard/api-keys" },
-  { name: "Settings", href: "/dashboard/settings" },
+  { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
+  { name: "Projects", href: "/dashboard/projects", icon: FolderKanban },
+  { name: "Docs", href: "/docs", icon: BookOpen },
 ];
 
 export default function DashboardLayout({
@@ -32,8 +31,9 @@ export default function DashboardLayout({
               <Link
                 key={item.name}
                 href={item.href}
-                className="flex items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium text-muted-foreground hover:bg-muted hover:text-foreground"
               >
+                <item.icon className="h-4 w-4" />
                 {item.name}
               </Link>
             ))}

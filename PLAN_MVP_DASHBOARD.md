@@ -72,14 +72,14 @@ Métriques disponibles via `/api/usage`:
 ### Phase 3: Simplification Navigation
 
 #### 3.1 Sidebar
-- [ ] **Dashboard** (icône: LayoutDashboard)
-- [ ] **Projects** (icône: FolderKanban)
-- [ ] **Docs** (icône: BookOpen)
-- [ ] Retirer "Analytics" et "API Keys" du menu principal
+- [x] **Dashboard** (icône: LayoutDashboard)
+- [x] **Projects** (icône: FolderKanban)
+- [x] **Docs** (icône: BookOpen)
+- [x] Retirer "Analytics" et "API Keys" du menu principal
 
 #### 3.2 API Keys → Sous Projects
-- [ ] Déplacer gestion API Keys dans la page projet (`/projects/[id]`)
-- [ ] Onglets dans page projet: "Overview" | "API Keys" | "Settings"
+- [x] Déplacer gestion API Keys dans la page projet (`/projects/[id]`)
+- [x] Onglets dans page projet: "Overview" | "API Keys" | "Settings"
 
 ### Phase 4: Hooks & Data
 

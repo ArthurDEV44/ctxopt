@@ -80,39 +80,47 @@ export function ProjectsContent({ projects }: ProjectsContentProps) {
           {projects.map((project) => (
             <div
               key={project.id}
-              className="group relative rounded-lg border bg-card p-6 transition-colors hover:bg-muted/50"
+              className="group relative rounded-lg border bg-card transition-colors hover:bg-muted/50"
             >
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="rounded-md bg-primary/10 p-2">
-                    <Folder className="h-5 w-5 text-primary" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{project.name}</h3>
-                    <p className="text-sm text-muted-foreground">{project.slug}</p>
+              <Link
+                href={`/dashboard/projects/${project.id}`}
+                className="block p-6"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="rounded-md bg-primary/10 p-2">
+                      <Folder className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">{project.name}</h3>
+                      <p className="text-sm text-muted-foreground">{project.slug}</p>
+                    </div>
                   </div>
                 </div>
-                <button
-                  onClick={() => handleDelete(project.id)}
-                  disabled={deletingId === project.id}
-                  className="rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 disabled:opacity-50"
-                  title="Delete project"
-                >
-                  {deletingId === project.id ? (
-                    <MoreVertical className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Trash2 className="h-4 w-4" />
-                  )}
-                </button>
-              </div>
-              {project.description && (
-                <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
-                  {project.description}
+                {project.description && (
+                  <p className="mt-3 text-sm text-muted-foreground line-clamp-2">
+                    {project.description}
+                  </p>
+                )}
+                <p className="mt-4 text-xs text-muted-foreground">
+                  Created {new Date(project.createdAt).toLocaleDateString()}
                 </p>
-              )}
-              <p className="mt-4 text-xs text-muted-foreground">
-                Created {new Date(project.createdAt).toLocaleDateString()}
-              </p>
+              </Link>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleDelete(project.id);
+                }}
+                disabled={deletingId === project.id}
+                className="absolute top-4 right-4 rounded-md p-1 text-muted-foreground opacity-0 transition-opacity hover:bg-destructive/10 hover:text-destructive group-hover:opacity-100 disabled:opacity-50"
+                title="Delete project"
+              >
+                {deletingId === project.id ? (
+                  <MoreVertical className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Trash2 className="h-4 w-4" />
+                )}
+              </button>
             </div>
           ))}
         </div>
