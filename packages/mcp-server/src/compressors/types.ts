@@ -69,3 +69,94 @@ export interface LineGroup {
   /** Whether this group contains warnings */
   hasWarning: boolean;
 }
+
+// =============================================================================
+// Diff Compression Types
+// =============================================================================
+
+/**
+ * Parsed diff hunk
+ */
+export interface DiffHunk {
+  /** Original file line start */
+  oldStart: number;
+  /** Original file line count */
+  oldCount: number;
+  /** New file line start */
+  newStart: number;
+  /** New file line count */
+  newCount: number;
+  /** The hunk content (including +/- prefixes) */
+  content: string;
+  /** Lines added in this hunk */
+  additions: number;
+  /** Lines removed in this hunk */
+  deletions: number;
+}
+
+/**
+ * Parsed file diff
+ */
+export interface FileDiff {
+  /** Old file path (null if new file) */
+  oldPath: string | null;
+  /** New file path (null if deleted file) */
+  newPath: string | null;
+  /** File status */
+  status: "modified" | "added" | "deleted" | "renamed";
+  /** Binary file indicator */
+  isBinary: boolean;
+  /** Hunks in this file */
+  hunks: DiffHunk[];
+  /** Total additions */
+  additions: number;
+  /** Total deletions */
+  deletions: number;
+}
+
+/**
+ * Complete parsed diff
+ */
+export interface ParsedDiff {
+  /** All file diffs */
+  files: FileDiff[];
+  /** Total additions across all files */
+  totalAdditions: number;
+  /** Total deletions across all files */
+  totalDeletions: number;
+}
+
+/**
+ * Diff compression strategy
+ */
+export type DiffStrategy = "hunks-only" | "summary" | "semantic";
+
+/**
+ * Diff compression options
+ */
+export interface DiffCompressOptions {
+  /** Compression strategy */
+  strategy: DiffStrategy;
+  /** Maximum tokens for output (semantic strategy) */
+  maxTokens?: number;
+  /** Number of context lines to keep (hunks-only strategy) */
+  contextLines?: number;
+}
+
+/**
+ * Diff compression result
+ */
+export interface DiffCompressedResult {
+  /** Compressed diff content */
+  compressed: string;
+  /** List of changed file paths */
+  filesChanged: string[];
+  /** Summary of changes */
+  summary: string;
+  /** Total additions */
+  additions: number;
+  /** Total deletions */
+  deletions: number;
+  /** Compression statistics */
+  stats: CompressionStats;
+}

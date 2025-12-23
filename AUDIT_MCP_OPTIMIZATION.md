@@ -861,12 +861,12 @@ interface SmartFileReadV2Input {
 
 ### Phase 3: Contexte Intelligent (Semaine 5-6)
 
-| Tâche | Priorité | Effort | Impact |
-|-------|----------|--------|--------|
+| Tâche | Priorité | Effort | Impact | Statut |
+|-------|----------|--------|--------|--------|
 | Implémenter `conversation-compress` | Moyenne | 4 jours | Conversations longues | **FAIT** |
-| Implémenter `diff-compress` | Basse | 2 jours | Git diffs |
-| Pipeline automatique | Moyenne | 3 jours | Chaînage intelligent |
-| Dashboard métriques avancées | Basse | 3 jours | Visibilité |
+| Implémenter `diff-compress` | Basse | 2 jours | Git diffs | **FAIT** |
+| Pipeline automatique | Moyenne | 3 jours | Chaînage intelligent | |
+| Dashboard métriques avancées | Basse | 3 jours | Visibilité | |
 
 ### Phase 4: Optimisations ML (Futur)
 
