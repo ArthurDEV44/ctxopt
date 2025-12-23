@@ -66,8 +66,8 @@ Métriques disponibles via `/api/usage`:
 - [x] `sessions-table.tsx` - Tableau sessions récentes
 
 #### 2.2 Refonte Composants Existants
-- [ ] `stats-cards.tsx` - Simplifier à 4 cards essentielles
-- [ ] Supprimer `QuickActions`, `SuggestionsPreview` (hors scope MVP)
+- [x] `stats-cards.tsx` - Simplifier à 4 cards essentielles
+- [x] Supprimer `QuickActions`, `SuggestionsPreview` (hors scope MVP)
 
 ### Phase 3: Simplification Navigation
 

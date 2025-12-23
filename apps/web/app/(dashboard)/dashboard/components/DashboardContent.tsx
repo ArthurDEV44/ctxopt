@@ -1,14 +1,11 @@
 "use client";
 
 import { useSearchParams, useRouter } from "next/navigation";
-import { useSuggestions } from "@/lib/hooks/useUsage";
 import { useUsageStats, useAllProjectsUsage } from "@/lib/hooks/useUsageStats";
 import { useSessions, useAllProjectsSessions } from "@/lib/hooks/useSessions";
-import { QuickActions } from "./QuickActions";
-import { SuggestionsPreview } from "./SuggestionsPreview";
-import { StatsCards } from "./StatsCards";
 import {
   ScopeSelector,
+  StatsCards,
   UsageChart,
   ModelBreakdown,
   SessionsTable,
@@ -57,11 +54,6 @@ export function DashboardContent({ userName }: DashboardContentProps) {
   });
 
   const sessionsData = scope === "all" ? allProjectsSessions : singleProjectSessions;
-
-  const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions({
-    status: "active",
-    limit: 5,
-  });
 
   return (
     <div className="space-y-8">
@@ -122,15 +114,6 @@ export function DashboardContent({ userName }: DashboardContentProps) {
         hasMore={sessionsData.hasMore}
         isLoading={sessionsData.isLoading}
         onLoadMore={sessionsData.loadMore}
-      />
-
-      {/* Quick Actions */}
-      <QuickActions />
-
-      {/* Suggestions */}
-      <SuggestionsPreview
-        suggestions={suggestionsData?.suggestions ?? []}
-        isLoading={suggestionsLoading}
       />
 
       {/* Quick Start Guide */}
