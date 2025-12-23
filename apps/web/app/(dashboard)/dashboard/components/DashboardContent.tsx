@@ -3,9 +3,11 @@
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSuggestions } from "@/lib/hooks/useUsage";
 import { useUsageStats, useAllProjectsUsage } from "@/lib/hooks/useUsageStats";
+import { useSessions, useAllProjectsSessions } from "@/lib/hooks/useSessions";
 import { QuickActions } from "./QuickActions";
 import { SuggestionsPreview } from "./SuggestionsPreview";
 import { StatsCards } from "./StatsCards";
+import { SessionsTable } from "./SessionsTable";
 import { ScopeSelector } from "@/components/dashboard/scope-selector";
 import { TokensChart } from "../analytics/components/TokensChart";
 import { CostBreakdown } from "../analytics/components/CostBreakdown";
@@ -44,6 +46,15 @@ export function DashboardContent({ userName }: DashboardContentProps) {
   });
 
   const usageStats = scope === "all" ? allProjectsUsage : singleProjectUsage;
+
+  // Fetch sessions based on scope
+  const allProjectsSessions = useAllProjectsSessions({ period: usageStats.period });
+  const singleProjectSessions = useSessions({
+    projectId: scope !== "all" ? scope : undefined,
+    period: usageStats.period,
+  });
+
+  const sessionsData = scope === "all" ? allProjectsSessions : singleProjectSessions;
 
   const { data: suggestionsData, isLoading: suggestionsLoading } = useSuggestions({
     status: "active",
@@ -102,6 +113,14 @@ export function DashboardContent({ userName }: DashboardContentProps) {
           />
         </div>
       </div>
+
+      {/* Sessions Table */}
+      <SessionsTable
+        sessions={sessionsData.sessions}
+        hasMore={sessionsData.hasMore}
+        isLoading={sessionsData.isLoading}
+        onLoadMore={sessionsData.loadMore}
+      />
 
       {/* Quick Actions */}
       <QuickActions />

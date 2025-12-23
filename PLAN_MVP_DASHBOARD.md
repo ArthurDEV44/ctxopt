@@ -52,8 +52,8 @@ Métriques disponibles via `/api/usage`:
 - [x] Période sélectionnable : 7d / 30d / 90d
 
 #### 1.4 Table Détails
-- [ ] Tableau des sessions récentes (date, tokens, savings, model)
-- [ ] Tri et pagination simple
+- [x] Tableau des sessions récentes (date, tokens, savings, model)
+- [x] Tri et pagination simple
 
 ### Phase 2: Composants Dashboard
 
