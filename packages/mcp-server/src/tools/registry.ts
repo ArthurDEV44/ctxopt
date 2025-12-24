@@ -23,6 +23,7 @@ export interface ToolExecuteResult {
 export class ToolRegistry {
   private tools: Map<string, ToolDefinition> = new Map();
   private middlewareChain: MiddlewareChain | null = null;
+  private changeCallbacks: Array<() => void> = [];
 
   /**
    * Set the middleware chain to use for tool execution
@@ -32,10 +33,31 @@ export class ToolRegistry {
   }
 
   /**
+   * Register callback for tool list changes
+   */
+  onToolsChanged(callback: () => void): void {
+    this.changeCallbacks.push(callback);
+  }
+
+  /**
+   * Emit tool list change notification
+   */
+  private emitChange(): void {
+    for (const cb of this.changeCallbacks) {
+      try {
+        cb();
+      } catch {
+        // Ignore callback errors
+      }
+    }
+  }
+
+  /**
    * Register a tool
    */
   register(tool: ToolDefinition): this {
     this.tools.set(tool.name, tool);
+    this.emitChange();
     return this;
   }
 
@@ -43,7 +65,11 @@ export class ToolRegistry {
    * Unregister a tool
    */
   unregister(name: string): boolean {
-    return this.tools.delete(name);
+    const result = this.tools.delete(name);
+    if (result) {
+      this.emitChange();
+    }
+    return result;
   }
 
   /**

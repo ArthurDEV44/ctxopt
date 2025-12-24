@@ -1,7 +1,8 @@
 /**
  * CtxOpt MCP Server
  *
- * Main server implementation with middleware architecture.
+ * Main server implementation with dynamic tool loading.
+ * Only core tools are loaded at startup to minimize token consumption.
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -14,24 +15,13 @@ import { createLoggingMiddleware } from "./middleware/logging.js";
 
 // Tools
 import { createToolRegistry, type ToolRegistry } from "./tools/registry.js";
-import { analyzeContext, analyzeContextSchema } from "./tools/analyze-context.js";
-import { optimizationTips, optimizationTipsSchema } from "./tools/optimization-tips.js";
-import { analyzeBuildOutputTool } from "./tools/analyze-build-output.js";
-import { compressContextTool } from "./tools/compress-context.js";
-import { smartFileReadTool } from "./tools/smart-file-read.js";
-import { deduplicateErrorsTool } from "./tools/deduplicate-errors.js";
-import { summarizeLogsTool } from "./tools/summarize-logs.js";
-import { autoOptimizeTool } from "./tools/auto-optimize.js";
-import { smartCacheTool } from "./tools/smart-cache-tool.js";
-import { semanticCompressTool } from "./tools/semantic-compress.js";
-import { contextBudgetTool } from "./tools/context-budget.js";
-import { codeSkeletonTool } from "./tools/code-skeleton.js";
-import { conversationCompressTool } from "./tools/conversation-compress.js";
-import { diffCompressTool } from "./tools/diff-compress.js";
-import { smartPipelineTool } from "./tools/smart-pipeline.js";
+import { getDynamicLoader, resetDynamicLoader } from "./tools/dynamic-loader.js";
+import { discoverToolsTool } from "./tools/discover-tools.js";
 
 export interface ServerConfig {
   verbose?: boolean;
+  /** Load all tools at startup instead of using dynamic loading */
+  loadAllTools?: boolean;
 }
 
 export interface ServerInstance {
@@ -43,7 +33,11 @@ export interface ServerInstance {
 /**
  * Create and configure the MCP server
  */
-export function createServer(config: ServerConfig = {}): ServerInstance {
+export async function createServer(config: ServerConfig = {}): Promise<ServerInstance> {
+  // Reset dynamic loader for fresh start
+  resetDynamicLoader();
+  const loader = getDynamicLoader();
+
   // Create middleware chain
   const middleware = createMiddlewareChain();
   middleware.use(createLoggingMiddleware({ verbose: config.verbose ?? false }));
@@ -52,36 +46,33 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   const tools = createToolRegistry();
   tools.setMiddlewareChain(middleware);
 
-  // Register tools
-  tools.register({
-    name: "analyze_context",
-    description:
-      "Analyze a prompt or context for token usage and optimization opportunities. Returns token count, estimated cost, and suggestions for improvement.",
-    inputSchema: analyzeContextSchema,
-    execute: async (args) => analyzeContext(args, config),
-  });
+  // Register the discover_tools meta-tool (always available)
+  tools.register(discoverToolsTool);
 
-  tools.register({
-    name: "optimization_tips",
-    description:
-      "Get context engineering best practices and optimization tips based on your usage patterns.",
-    inputSchema: optimizationTipsSchema,
-    execute: async (args) => optimizationTips(args, config),
-  });
+  // Load tools based on configuration
+  if (config.loadAllTools) {
+    // Fallback: load all tools for clients that don't support dynamic loading
+    const allTools = await loader.loadAllTools();
+    for (const tool of allTools) {
+      tools.register(tool);
+    }
+  } else {
+    // Default: load only core tools (auto_optimize, smart_file_read)
+    const coreTools = await loader.loadCoreTools();
+    for (const tool of coreTools) {
+      tools.register(tool);
+    }
+  }
 
-  tools.register(analyzeBuildOutputTool);
-  tools.register(compressContextTool);
-  tools.register(smartFileReadTool);
-  tools.register(deduplicateErrorsTool);
-  tools.register(summarizeLogsTool);
-  tools.register(autoOptimizeTool);
-  tools.register(smartCacheTool);
-  tools.register(semanticCompressTool);
-  tools.register(contextBudgetTool);
-  tools.register(codeSkeletonTool);
-  tools.register(conversationCompressTool);
-  tools.register(diffCompressTool);
-  tools.register(smartPipelineTool);
+  // Connect dynamic loader to registry
+  loader.onToolsChanged(() => {
+    // Register newly loaded tools
+    for (const tool of loader.getLoadedTools()) {
+      if (!tools.get(tool.name)) {
+        tools.register(tool);
+      }
+    }
+  });
 
   // Create MCP server
   const server = new Server(
@@ -105,12 +96,28 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
 
+    // Try to load tool dynamically if not found
+    if (!tools.get(name)) {
+      const loaded = await loader.loadByNames([name]);
+      for (const tool of loaded) {
+        tools.register(tool);
+      }
+    }
+
     const result = await tools.execute(name, args);
 
     return {
       content: result.content,
       isError: result.isError,
     };
+  });
+
+  // Set up notification for tool list changes
+  tools.onToolsChanged(() => {
+    // Send notification to client that tool list has changed
+    server.notification({
+      method: "notifications/tools/list_changed",
+    });
   });
 
   return {
@@ -124,7 +131,7 @@ export function createServer(config: ServerConfig = {}): ServerInstance {
  * Run the MCP server on stdio transport
  */
 export async function runServer(config: ServerConfig = {}): Promise<void> {
-  const { server } = createServer(config);
+  const { server } = await createServer(config);
 
   const transport = new StdioServerTransport();
 
