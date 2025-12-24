@@ -1,0 +1,41 @@
+import { Zap, Brain, Wrench, LucideIcon } from 'lucide-react';
+
+export const INSTALL_COMMAND = "npm install ctxopt";
+
+export const APP_NAME = "CtxOpt";
+
+export interface Feature {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+}
+
+export const FEATURES: Feature[] = [
+  {
+    icon: Zap,
+    title: "19 Optimization Tools",
+    description: "Smart file reading, build output compression, log summarization, error deduplication, and more.",
+  },
+  {
+    icon: Brain,
+    title: "AST-Aware Parsing",
+    description: "Extract functions, classes, and types from code files. Supports TypeScript, Python, Go, Rust, and more.",
+  },
+  {
+    icon: Wrench,
+    title: "Universal IDE Support",
+    description: "Works with Claude Code, Cursor, Windsurf, and any MCP-compatible client.",
+  },
+];
+
+export interface NavLink {
+  label: string;
+  href: string;
+}
+
+export const NAV_LINKS: NavLink[] = [
+  { label: "Features", href: "#features" },
+  { label: "Docs", href: "/docs" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Blog", href: "/blog" },
+];
