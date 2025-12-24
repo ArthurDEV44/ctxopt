@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { formatNumber, formatCost } from "@ctxopt/shared";
+import { formatNumber } from "@ctxopt/shared";
 
 export interface Session {
   id: string;
@@ -16,7 +16,6 @@ export interface Session {
   tokensUsed: number;
   tokensSaved: number;
   savingsPercent: number;
-  costMicros: number;
   model: string | null;
 }
 
@@ -28,6 +27,7 @@ interface SessionsTableProps {
 }
 
 const MODEL_NAMES: Record<string, string> = {
+  "claude-opus-4-5-20251101": "Opus 4.5",
   "claude-opus-4-20250514": "Opus 4",
   "claude-sonnet-4-20250514": "Sonnet 4",
   "claude-3-5-haiku-20241022": "Haiku 3.5",
@@ -117,7 +117,6 @@ export function SessionsTable({
             <TableHead className="text-right">Tokens</TableHead>
             <TableHead className="text-right">Saved</TableHead>
             <TableHead className="text-right">Savings</TableHead>
-            <TableHead className="text-right">Cost</TableHead>
             <TableHead>Model</TableHead>
           </TableRow>
         </TableHeader>
@@ -135,9 +134,6 @@ export function SessionsTable({
               </TableCell>
               <TableCell className="text-right">
                 {session.savingsPercent.toFixed(1)}%
-              </TableCell>
-              <TableCell className="text-right">
-                {formatCost(session.costMicros)}
               </TableCell>
               <TableCell>
                 <span className={getModelColor(session.model)}>

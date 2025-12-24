@@ -15,6 +15,7 @@ interface ModelBreakdownProps {
 }
 
 const MODEL_NAMES: Record<string, string> = {
+  "claude-opus-4-5-20251101": "Opus 4.5",
   "claude-opus-4-20250514": "Opus 4",
   "claude-sonnet-4-20250514": "Sonnet 4",
   "claude-3-5-haiku-20241022": "Haiku 3.5",

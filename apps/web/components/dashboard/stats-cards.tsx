@@ -1,11 +1,9 @@
 "use client";
 
-import { formatNumber, formatCost } from "@ctxopt/shared";
+import { formatNumber } from "@ctxopt/shared";
 
 interface StatsCardsProps {
   tokensUsed: number;
-  tokensSaved: number;
-  estimatedCostMicros: number;
   savingsPercent: number;
   isLoading?: boolean;
 }
@@ -44,16 +42,12 @@ function getSavingsRateBadge(percent: number) {
 
 export function StatsCards({
   tokensUsed,
-  tokensSaved,
-  estimatedCostMicros,
   savingsPercent,
   isLoading = false,
 }: StatsCardsProps) {
   if (isLoading) {
     return (
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCardSkeleton />
-        <StatCardSkeleton />
+      <div className="grid gap-4 md:grid-cols-2">
         <StatCardSkeleton />
         <StatCardSkeleton />
       </div>
@@ -63,28 +57,12 @@ export function StatsCards({
   const badge = getSavingsRateBadge(savingsPercent);
 
   return (
-    <div className="grid gap-4 md:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2">
       {/* Tokens Used */}
       <div className="rounded-lg border p-6">
         <p className="text-sm text-muted-foreground">Tokens Used</p>
         <p className="text-3xl font-bold">{formatNumber(tokensUsed)}</p>
         <p className="text-xs text-muted-foreground">input + output</p>
-      </div>
-
-      {/* Tokens Saved */}
-      <div className="rounded-lg border p-6">
-        <p className="text-sm text-muted-foreground">Tokens Saved</p>
-        <p className="text-3xl font-bold text-green-600">
-          {formatNumber(tokensSaved)}
-        </p>
-        <p className="text-xs text-muted-foreground">via MCP tools</p>
-      </div>
-
-      {/* Estimated Cost */}
-      <div className="rounded-lg border p-6">
-        <p className="text-sm text-muted-foreground">Est. Cost</p>
-        <p className="text-3xl font-bold">{formatCost(estimatedCostMicros)}</p>
-        <p className="text-xs text-muted-foreground">this period</p>
       </div>
 
       {/* Savings Rate */}

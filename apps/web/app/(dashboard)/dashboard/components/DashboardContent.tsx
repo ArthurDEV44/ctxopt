@@ -8,7 +8,6 @@ import {
   ScopeSelector,
   StatsCards,
   UsageChart,
-  ModelBreakdown,
   SessionsTable,
 } from "@/components/dashboard";
 import { DashboardEmptyState } from "./DashboardEmptyState";
@@ -76,8 +75,6 @@ export function DashboardContent({ userName }: DashboardContentProps) {
       {/* Stats Cards */}
       <StatsCards
         tokensUsed={usageStats.stats?.totalTokensUsed ?? 0}
-        tokensSaved={usageStats.stats?.totalTokensSaved ?? 0}
-        estimatedCostMicros={usageStats.stats?.totalCostMicros ?? 0}
         savingsPercent={usageStats.stats?.totalSavingsPercent ?? 0}
         isLoading={usageStats.isLoading}
       />
@@ -103,16 +100,10 @@ export function DashboardContent({ userName }: DashboardContentProps) {
           </div>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-2">
-          <UsageChart
-            data={usageStats.stats?.dailyData ?? []}
-            isLoading={usageStats.isLoading}
-          />
-          <ModelBreakdown
-            data={usageStats.stats?.modelBreakdown ?? {}}
-            isLoading={usageStats.isLoading}
-          />
-        </div>
+        <UsageChart
+          data={usageStats.stats?.dailyData ?? []}
+          isLoading={usageStats.isLoading}
+        />
       </div>
 
       {/* Sessions Table */}
