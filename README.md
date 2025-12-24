@@ -46,10 +46,66 @@ ctxopt-mcp setup
 ctxopt-mcp setup          # Auto-configure detected IDEs
 ctxopt-mcp setup --claude # Configure Claude Code only
 ctxopt-mcp setup --cursor # Configure Cursor only
+ctxopt-mcp setup --hooks  # Install project hooks (CLAUDE.md)
 ctxopt-mcp doctor         # Verify installation
 ctxopt-mcp serve          # Start MCP server (used by IDE)
 ctxopt-mcp --help         # Show help
 ctxopt-mcp --version      # Show version
+```
+
+## Usage Guide
+
+### Register Your Model (Recommended)
+
+At the start of each session, register the model for accurate tracking:
+
+```
+mcp__ctxopt__register_model model="claude-opus-4-5-20251101"
+```
+
+Common model IDs:
+- `claude-opus-4-5-20251101` - Opus 4.5
+- `claude-sonnet-4-20250514` - Sonnet 4
+- `claude-3-5-haiku-20241022` - Haiku 3.5
+
+### Available MCP Tools
+
+| Tool | Purpose | Token Savings |
+|------|---------|---------------|
+| `smart_file_read` | Read code with AST extraction | 50-70% |
+| `auto_optimize` | Auto-detect and compress any content | 40-95% |
+| `analyze_build_output` | Parse build errors | 95%+ |
+| `summarize_logs` | Summarize server/test/build logs | 80-90% |
+| `compress_context` | Generic content compression | 40-60% |
+| `deduplicate_errors` | Group repeated errors | 80-95% |
+| `session_stats` | View current session statistics | - |
+| `register_model` | Register model for accurate tracking | - |
+
+### Smart File Read Examples
+
+```bash
+# Get file structure overview
+mcp__ctxopt__smart_file_read filePath="src/server.ts"
+
+# Extract specific function
+mcp__ctxopt__smart_file_read filePath="src/server.ts" target={"type":"function","name":"createServer"}
+
+# Get skeleton (signatures only)
+mcp__ctxopt__smart_file_read filePath="src/server.ts" skeleton=true
+```
+
+### Compress Build Output
+
+After a failed build command, compress the output:
+
+```bash
+mcp__ctxopt__auto_optimize content="<paste npm/tsc/webpack output>"
+```
+
+### View Session Statistics
+
+```bash
+mcp__ctxopt__session_stats
 ```
 
 ## IDE Configuration
