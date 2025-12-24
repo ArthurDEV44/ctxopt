@@ -170,6 +170,11 @@ export const smartFileReadSchema = {
       type: "string",
       description: "Force language (ts, js, py, go, rust, php, swift)",
     },
+    format: {
+      type: "string",
+      enum: ["plain", "markdown"],
+      description: "Output format (default: plain)",
+    },
   },
   required: ["filePath"],
 };
@@ -194,43 +199,50 @@ const inputSchema = z.object({
   skeleton: z.boolean().optional().default(false),
   cache: z.boolean().optional().default(true),
   language: z.string().optional(),
+  format: z.enum(["plain", "markdown"]).optional().default("plain"),
 });
+
+type OutputFormat = "plain" | "markdown";
 
 function formatExtractedContent(
   extracted: ExtractedContent,
   filePath: string,
   language: string,
   totalLines: number,
-  includeImports: boolean
+  includeImports: boolean,
+  format: OutputFormat = "plain"
 ): string {
   const parts: string[] = [];
   const element = extracted.elements[0];
+  const md = format === "markdown";
 
   if (element) {
-    parts.push(`## Extracted: ${element.type} \`${element.name}\``);
+    parts.push(md ? `## Extracted: ${element.type} \`${element.name}\`` : `[${element.type}] ${element.name}`);
   } else {
-    parts.push(`## Extracted: lines ${extracted.startLine}-${extracted.endLine}`);
+    parts.push(md ? `## Extracted: lines ${extracted.startLine}-${extracted.endLine}` : `[lines ${extracted.startLine}-${extracted.endLine}]`);
   }
 
-  parts.push("");
-  parts.push(`**File:** ${filePath}`);
-  parts.push(`**Lines:** ${extracted.startLine}-${extracted.endLine} of ${totalLines}`);
-  parts.push("");
+  parts.push(md ? "" : `${filePath}:${extracted.startLine}-${extracted.endLine} (${language}, ${totalLines} lines)`);
+  if (md) {
+    parts.push(`**File:** ${filePath}`);
+    parts.push(`**Lines:** ${extracted.startLine}-${extracted.endLine} of ${totalLines}`);
+    parts.push("");
+  }
 
   // Add related imports if present
   if (includeImports && extracted.relatedImports.length > 0) {
-    parts.push("```" + language);
+    if (md) parts.push("```" + language);
     parts.push("// Related imports");
     for (const imp of extracted.relatedImports) {
       parts.push(imp);
     }
     parts.push("");
     parts.push(extracted.content);
-    parts.push("```");
+    if (md) parts.push("```");
   } else {
-    parts.push("```" + language);
+    if (md) parts.push("```" + language);
     parts.push(extracted.content);
-    parts.push("```");
+    if (md) parts.push("```");
   }
 
   // Token savings estimate
@@ -238,9 +250,11 @@ function formatExtractedContent(
   const savedLines = totalLines - extractedLines;
   if (savedLines > 0 && totalLines > 10) {
     const savingsPercent = Math.round((savedLines / totalLines) * 100);
-    parts.push("");
+    parts.push(md ? "" : "---");
     parts.push(
-      `**Extracted:** ${extractedLines} lines (of ${totalLines}) - ${savingsPercent}% reduction`
+      md
+        ? `**Extracted:** ${extractedLines} lines (of ${totalLines}) - ${savingsPercent}% reduction`
+        : `Extracted: ${extractedLines}/${totalLines} lines (${savingsPercent}% reduction)`
     );
   }
 
@@ -250,14 +264,20 @@ function formatExtractedContent(
 function formatSearchResults(
   results: ReturnType<typeof searchElements>,
   filePath: string,
-  query: string
+  query: string,
+  format: OutputFormat = "plain"
 ): string {
   const parts: string[] = [];
+  const md = format === "markdown";
 
-  parts.push(`## Search Results: "${query}"`);
-  parts.push(`**File:** ${filePath}`);
-  parts.push(`**Matches:** ${results.length}`);
-  parts.push("");
+  parts.push(md ? `## Search Results: "${query}"` : `Search: "${query}" in ${filePath}`);
+  if (md) {
+    parts.push(`**File:** ${filePath}`);
+    parts.push(`**Matches:** ${results.length}`);
+    parts.push("");
+  } else {
+    parts.push(`Matches: ${results.length}`);
+  }
 
   if (results.length === 0) {
     parts.push("No matches found.");
@@ -269,24 +289,28 @@ function formatSearchResults(
     const exported = element.isExported ? " (exported)" : "";
     const async = element.isAsync ? " async" : "";
 
-    parts.push(
-      `- **${element.type}** \`${prefix}${element.name}\`${exported}${async} - lines ${element.startLine}-${element.endLine}`
-    );
-
-    if (element.signature) {
-      parts.push(`  \`${element.signature}\``);
-    }
-
-    if (element.documentation) {
-      const docPreview = element.documentation.split("\n")[0]?.slice(0, 80);
-      if (docPreview) {
-        parts.push(`  _${docPreview}${element.documentation.length > 80 ? "..." : ""}_`);
+    if (md) {
+      parts.push(
+        `- **${element.type}** \`${prefix}${element.name}\`${exported}${async} - lines ${element.startLine}-${element.endLine}`
+      );
+      if (element.signature) {
+        parts.push(`  \`${element.signature}\``);
       }
+      if (element.documentation) {
+        const docPreview = element.documentation.split("\n")[0]?.slice(0, 80);
+        if (docPreview) {
+          parts.push(`  _${docPreview}${element.documentation.length > 80 ? "..." : ""}_`);
+        }
+      }
+    } else {
+      parts.push(`${element.type} ${prefix}${element.name}${exported}${async} (${element.startLine}-${element.endLine})`);
     }
   }
 
-  parts.push("");
-  parts.push("Use `target: { type, name }` to extract a specific element.");
+  if (md) {
+    parts.push("");
+    parts.push("Use `target: { type, name }` to extract a specific element.");
+  }
 
   return parts.join("\n");
 }
@@ -299,91 +323,130 @@ function formatSkeletonOutput(
   structure: FileStructure,
   filePath: string,
   languageId: string,
-  totalLines: number
+  totalLines: number,
+  format: OutputFormat = "plain"
 ): string {
   const parts: string[] = [];
-  parts.push(`## File Skeleton: ${filePath}`);
-  parts.push("");
-  parts.push(`**Language:** ${languageId}`);
-  parts.push(`**Total Lines:** ${totalLines}`);
-  parts.push("");
+  const md = format === "markdown";
+
+  parts.push(md ? `## File Skeleton: ${filePath}` : `${filePath} (${languageId}, ${totalLines} lines)`);
+  if (md) {
+    parts.push("");
+    parts.push(`**Language:** ${languageId}`);
+    parts.push(`**Total Lines:** ${totalLines}`);
+    parts.push("");
+  }
 
   let elementCount = 0;
 
   // Imports summary (collapsed)
   if (structure.imports?.length) {
-    parts.push(`### Imports (${structure.imports.length})`);
-    // Show first 5 imports, summarize rest
-    const displayImports = structure.imports.slice(0, 5);
-    for (const imp of displayImports) {
-      parts.push(`- \`${imp}\``);
+    if (md) {
+      parts.push(`### Imports (${structure.imports.length})`);
+      const displayImports = structure.imports.slice(0, 5);
+      for (const imp of displayImports) {
+        parts.push(`- \`${imp}\``);
+      }
+      if (structure.imports.length > 5) {
+        parts.push(`- ... and ${structure.imports.length - 5} more`);
+      }
+      parts.push("");
+    } else {
+      const importList = structure.imports.slice(0, 3).join(", ");
+      const more = structure.imports.length > 3 ? ` +${structure.imports.length - 3}` : "";
+      parts.push(`IMPORTS: ${importList}${more}`);
     }
-    if (structure.imports.length > 5) {
-      parts.push(`- ... and ${structure.imports.length - 5} more`);
-    }
-    parts.push("");
   }
 
   // Types and Interfaces
   if (structure.types?.length) {
-    parts.push("### Types/Interfaces");
-    for (const t of structure.types) {
-      const exported = t.isExported ? "export " : "";
-      parts.push(`- \`${exported}${t.signature || t.name}\``);
-      elementCount++;
+    if (md) {
+      parts.push("### Types/Interfaces");
+      for (const t of structure.types) {
+        const exported = t.isExported ? "export " : "";
+        parts.push(`- \`${exported}${t.signature || t.name}\``);
+        elementCount++;
+      }
+      parts.push("");
+    } else {
+      const typeList = structure.types.map(t => `${t.name} (${t.startLine}-${t.endLine})`).join(", ");
+      parts.push(`TYPES: ${typeList}`);
+      elementCount += structure.types.length;
     }
-    parts.push("");
   }
 
   // Functions (signatures only)
   const functions = structure.functions?.filter((f) => !f.parent) || [];
   if (functions.length) {
-    parts.push("### Functions");
-    for (const fn of functions) {
-      const exported = fn.isExported ? "export " : "";
-      const asyncMod = fn.isAsync ? "async " : "";
-      const sig = fn.signature || `${fn.name}()`;
-      parts.push(`- \`${exported}${asyncMod}${sig}\` (lines ${fn.startLine}-${fn.endLine})`);
-      elementCount++;
+    if (md) {
+      parts.push("### Functions");
+      for (const fn of functions) {
+        const exported = fn.isExported ? "export " : "";
+        const asyncMod = fn.isAsync ? "async " : "";
+        const sig = fn.signature || `${fn.name}()`;
+        parts.push(`- \`${exported}${asyncMod}${sig}\` (lines ${fn.startLine}-${fn.endLine})`);
+        elementCount++;
+      }
+      parts.push("");
+    } else {
+      const fnList = functions.map(fn => `${fn.name} (${fn.startLine}-${fn.endLine})`).join(", ");
+      parts.push(`FUNCTIONS: ${fnList}`);
+      elementCount += functions.length;
     }
-    parts.push("");
   }
 
   // Classes with method signatures
   if (structure.classes?.length) {
-    parts.push("### Classes");
-    for (const cls of structure.classes) {
-      const exported = cls.isExported ? "export " : "";
-      parts.push(`- \`${exported}class ${cls.name}\` (lines ${cls.startLine}-${cls.endLine})`);
-      elementCount++;
+    if (md) {
+      parts.push("### Classes");
+      for (const cls of structure.classes) {
+        const exported = cls.isExported ? "export " : "";
+        parts.push(`- \`${exported}class ${cls.name}\` (lines ${cls.startLine}-${cls.endLine})`);
+        elementCount++;
 
-      // Methods
-      const methods = structure.functions?.filter((f) => f.parent === cls.name) || [];
-      for (const m of methods) {
-        const asyncMod = m.isAsync ? "async " : "";
-        const sig = m.signature || `${m.name}()`;
-        parts.push(`  - \`${asyncMod}${sig}\``);
+        const methods = structure.functions?.filter((f) => f.parent === cls.name) || [];
+        for (const m of methods) {
+          const asyncMod = m.isAsync ? "async " : "";
+          const sig = m.signature || `${m.name}()`;
+          parts.push(`  - \`${asyncMod}${sig}\``);
+        }
       }
+      parts.push("");
+    } else {
+      const clsList = structure.classes.map(cls => {
+        const methods = structure.functions?.filter((f) => f.parent === cls.name) || [];
+        const methodNames = methods.length > 0 ? ` [${methods.map(m => m.name).join(", ")}]` : "";
+        return `${cls.name} (${cls.startLine}-${cls.endLine})${methodNames}`;
+      }).join(", ");
+      parts.push(`CLASSES: ${clsList}`);
+      elementCount += structure.classes.length;
     }
-    parts.push("");
   }
 
   // Variables (exported only for skeleton)
   const exportedVars = structure.variables?.filter((v) => v.isExported) || [];
   if (exportedVars.length) {
-    parts.push("### Exported Variables");
-    for (const v of exportedVars) {
-      parts.push(`- \`${v.signature || v.name}\``);
-      elementCount++;
+    if (md) {
+      parts.push("### Exported Variables");
+      for (const v of exportedVars) {
+        parts.push(`- \`${v.signature || v.name}\``);
+        elementCount++;
+      }
+      parts.push("");
+    } else {
+      const varList = exportedVars.map(v => v.name).join(", ");
+      parts.push(`EXPORTS: ${varList}`);
+      elementCount += exportedVars.length;
     }
-    parts.push("");
   }
 
   // Skeleton summary
-  parts.push("---");
-  parts.push(
-    `**Skeleton:** ${elementCount} elements extracted (use \`target\` to get full implementation)`
-  );
+  if (md) {
+    parts.push("---");
+    parts.push(
+      `**Skeleton:** ${elementCount} elements extracted (use \`target\` to get full implementation)`
+    );
+  }
 
   return parts.join("\n");
 }
@@ -446,6 +509,7 @@ export async function executeSmartFileRead(
     skeleton: input.skeleton,
     lines: input.lines,
     language: input.language,
+    format: input.format,
   })}`;
 
   // Check cache if enabled
@@ -472,7 +536,8 @@ export async function executeSmartFileRead(
       input.filePath,
       languageId,
       totalLines,
-      false
+      false,
+      input.format
     );
     return { content: [{ type: "text", text: result }] };
   }
@@ -481,14 +546,19 @@ export async function executeSmartFileRead(
   if (!hasParserSupport(language)) {
     // Fallback: return full file with warning
     const parts: string[] = [];
-    parts.push(`## File: ${input.filePath}`);
-    parts.push("");
-    parts.push(`**Language:** ${language} (no AST support, returning full file)`);
-    parts.push(`**Lines:** ${totalLines}`);
-    parts.push("");
-    parts.push("```" + languageId);
+    const md = input.format === "markdown";
+    if (md) {
+      parts.push(`## File: ${input.filePath}`);
+      parts.push("");
+      parts.push(`**Language:** ${language} (no AST support, returning full file)`);
+      parts.push(`**Lines:** ${totalLines}`);
+      parts.push("");
+      parts.push("```" + languageId);
+    } else {
+      parts.push(`${input.filePath} (${language}, ${totalLines} lines, no AST support)`);
+    }
     parts.push(content);
-    parts.push("```");
+    if (md) parts.push("```");
 
     return { content: [{ type: "text", text: parts.join("\n") }] };
   }
@@ -496,7 +566,7 @@ export async function executeSmartFileRead(
   // Priority 2: Skeleton mode - signatures only overview
   if (input.skeleton) {
     const structure = parseFile(content, language);
-    const skeleton = formatSkeletonOutput(structure, input.filePath, languageId, totalLines);
+    const skeleton = formatSkeletonOutput(structure, input.filePath, languageId, totalLines, input.format);
     return cacheAndReturn(skeleton);
   }
 
@@ -523,7 +593,8 @@ export async function executeSmartFileRead(
       input.filePath,
       languageId,
       totalLines,
-      input.includeImports
+      input.includeImports,
+      input.format
     );
     return cacheAndReturn(result);
   }
@@ -531,13 +602,13 @@ export async function executeSmartFileRead(
   // Priority 4: Search by query
   if (input.query) {
     const results = searchElements(content, language, input.query);
-    const result = formatSearchResults(results, input.filePath, input.query);
+    const result = formatSearchResults(results, input.filePath, input.query, input.format);
     return cacheAndReturn(result);
   }
 
   // Default: Return file structure summary
   const structure = parseFile(content, language);
-  const summary = formatStructureSummary(structure, input.filePath);
+  const summary = formatStructureSummary(structure, input.filePath, input.format);
 
   return cacheAndReturn(summary);
 }

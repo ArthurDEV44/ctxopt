@@ -106,7 +106,7 @@ export async function executeDeduplicateErrors(
   parts.push("");
 
   // Formatted groups
-  const formattedGroups = formatGroups(result, options);
+  const formattedGroups = formatGroups(result, "markdown", options);
   if (formattedGroups.trim()) {
     parts.push(formattedGroups);
   }

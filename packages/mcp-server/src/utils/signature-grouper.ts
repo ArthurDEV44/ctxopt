@@ -169,10 +169,12 @@ function processErrorLine(
  */
 export function formatGroups(
   result: GroupingResult,
+  format: "plain" | "markdown" = "plain",
   options: Partial<GroupOptions> = {}
 ): string {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const parts: string[] = [];
+  const md = format === "markdown";
 
   // Sort groups by count (most frequent first)
   const sortedGroups = Array.from(result.groups.values()).sort((a, b) => b.count - a.count);
@@ -183,22 +185,31 @@ export function formatGroups(
 
   // Format duplicated errors
   if (duplicates.length > 0) {
-    parts.push("## Deduplicated Errors\n");
+    parts.push(md ? "## Deduplicated Errors\n" : "DEDUPLICATED ERRORS:");
 
     for (const [i, group] of duplicates.entries()) {
-      parts.push(`### ${i + 1}. ${group.code ? `${group.code}: ` : ""}${truncateMessage(group.message, 80)}`);
-      parts.push(`**Occurrences:** ${group.count}`);
-
-      // Show first occurrence
-      parts.push(`**First:** \`${truncateMessage(group.firstOccurrence, 100)}\``);
+      const code = group.code ? `${group.code}: ` : "";
+      const msg = truncateMessage(group.message, 80);
+      if (md) {
+        parts.push(`### ${i + 1}. ${code}${msg}`);
+        parts.push(`**Occurrences:** ${group.count}`);
+        parts.push(`**First:** \`${truncateMessage(group.firstOccurrence, 100)}\``);
+      } else {
+        parts.push(`${i + 1}. ${code}${msg}`);
+        parts.push(`   Occurrences: ${group.count}`);
+        parts.push(`   First: ${truncateMessage(group.firstOccurrence, 100)}`);
+      }
 
       // Show locations if available
       if (group.locations.length > 1) {
         const otherLocations = group.locations.slice(1, 6);
         const remaining = group.locations.length - 6;
-        parts.push(
-          `**Also in:** ${otherLocations.join(", ")}${remaining > 0 ? ` (+${remaining} more)` : ""}`
-        );
+        const suffix = remaining > 0 ? ` (+${remaining} more)` : "";
+        if (md) {
+          parts.push(`**Also in:** ${otherLocations.join(", ")}${suffix}`);
+        } else {
+          parts.push(`   Also in: ${otherLocations.join(", ")}${suffix}`);
+        }
       }
 
       parts.push("");
@@ -207,12 +218,13 @@ export function formatGroups(
 
   // Show unique errors if any (below threshold)
   if (unique.length > 0 && opts.keepFirst > 0) {
-    parts.push("## Unique Errors\n");
+    parts.push(md ? "## Unique Errors\n" : "UNIQUE ERRORS:");
     for (const group of unique.slice(0, opts.keepFirst * 5)) {
-      parts.push(`- ${group.firstOccurrence}`);
+      parts.push(md ? `- ${group.firstOccurrence}` : `  ${group.firstOccurrence}`);
     }
     if (unique.length > opts.keepFirst * 5) {
-      parts.push(`\n*...and ${unique.length - opts.keepFirst * 5} more unique errors*`);
+      const more = unique.length - opts.keepFirst * 5;
+      parts.push(md ? `\n*...and ${more} more unique errors*` : `  ...and ${more} more unique errors`);
     }
     parts.push("");
   }

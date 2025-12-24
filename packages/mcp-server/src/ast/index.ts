@@ -141,99 +141,144 @@ export function extractLines(
 }
 
 /**
- * Format file structure as markdown summary
+ * Format file structure as summary
  */
-export function formatStructureSummary(structure: FileStructure, filePath: string): string {
+export function formatStructureSummary(
+  structure: FileStructure,
+  filePath: string,
+  format: "plain" | "markdown" = "plain"
+): string {
   const parts: string[] = [];
+  const md = format === "markdown";
 
-  parts.push(`## File Structure: ${filePath}`);
-  parts.push("");
-  parts.push(`**Language:** ${formatLanguageName(structure.language)}`);
-  parts.push(`**Lines:** ${structure.totalLines}`);
-  parts.push("");
+  if (md) {
+    parts.push(`## File Structure: ${filePath}`);
+    parts.push("");
+    parts.push(`**Language:** ${formatLanguageName(structure.language)}`);
+    parts.push(`**Lines:** ${structure.totalLines}`);
+    parts.push("");
+  } else {
+    parts.push(`${filePath} (${formatLanguageName(structure.language)}, ${structure.totalLines} lines)`);
+  }
 
   // Exports
   if (structure.exports.length > 0) {
-    parts.push("### Exports");
-    for (const exp of structure.exports) {
-      parts.push(`- \`${exp.name}\` (line ${exp.startLine})`);
+    if (md) {
+      parts.push("### Exports");
+      for (const exp of structure.exports) {
+        parts.push(`- \`${exp.name}\` (line ${exp.startLine})`);
+      }
+      parts.push("");
+    } else {
+      const expList = structure.exports.map(e => e.name).join(", ");
+      parts.push(`EXPORTS: ${expList}`);
     }
-    parts.push("");
   }
 
   // Functions
   if (structure.functions.length > 0) {
-    parts.push("### Functions");
-    for (const func of structure.functions) {
-      const prefix = func.type === "method" ? `${func.parent}.` : "";
-      const async = func.isAsync ? "async " : "";
-      const exported = func.isExported ? "exported " : "";
-      parts.push(
-        `- \`${prefix}${func.name}\` (${exported}${async}${func.type}, lines ${func.startLine}-${func.endLine})`
-      );
+    if (md) {
+      parts.push("### Functions");
+      for (const func of structure.functions) {
+        const prefix = func.type === "method" ? `${func.parent}.` : "";
+        const async = func.isAsync ? "async " : "";
+        const exported = func.isExported ? "exported " : "";
+        parts.push(
+          `- \`${prefix}${func.name}\` (${exported}${async}${func.type}, lines ${func.startLine}-${func.endLine})`
+        );
+      }
+      parts.push("");
+    } else {
+      const fnList = structure.functions.map(f => `${f.name} (${f.startLine}-${f.endLine})`).join(", ");
+      parts.push(`FUNCTIONS: ${fnList}`);
     }
-    parts.push("");
   }
 
   // Classes
   if (structure.classes.length > 0) {
-    parts.push("### Classes");
-    for (const cls of structure.classes) {
-      const exported = cls.isExported ? "exported " : "";
-      parts.push(`- \`${cls.name}\` (${exported}class, lines ${cls.startLine}-${cls.endLine})`);
+    if (md) {
+      parts.push("### Classes");
+      for (const cls of structure.classes) {
+        const exported = cls.isExported ? "exported " : "";
+        parts.push(`- \`${cls.name}\` (${exported}class, lines ${cls.startLine}-${cls.endLine})`);
+      }
+      parts.push("");
+    } else {
+      const clsList = structure.classes.map(c => `${c.name} (${c.startLine}-${c.endLine})`).join(", ");
+      parts.push(`CLASSES: ${clsList}`);
     }
-    parts.push("");
   }
 
   // Interfaces
   if (structure.interfaces.length > 0) {
-    parts.push("### Interfaces");
-    for (const iface of structure.interfaces) {
-      const exported = iface.isExported ? "exported " : "";
-      parts.push(
-        `- \`${iface.name}\` (${exported}interface, lines ${iface.startLine}-${iface.endLine})`
-      );
+    if (md) {
+      parts.push("### Interfaces");
+      for (const iface of structure.interfaces) {
+        const exported = iface.isExported ? "exported " : "";
+        parts.push(
+          `- \`${iface.name}\` (${exported}interface, lines ${iface.startLine}-${iface.endLine})`
+        );
+      }
+      parts.push("");
+    } else {
+      const ifList = structure.interfaces.map(i => `${i.name} (${i.startLine}-${i.endLine})`).join(", ");
+      parts.push(`INTERFACES: ${ifList}`);
     }
-    parts.push("");
   }
 
   // Types
   if (structure.types.length > 0) {
-    parts.push("### Types");
-    for (const type of structure.types) {
-      const exported = type.isExported ? "exported " : "";
-      parts.push(`- \`${type.name}\` (${exported}type, lines ${type.startLine}-${type.endLine})`);
+    if (md) {
+      parts.push("### Types");
+      for (const type of structure.types) {
+        const exported = type.isExported ? "exported " : "";
+        parts.push(`- \`${type.name}\` (${exported}type, lines ${type.startLine}-${type.endLine})`);
+      }
+      parts.push("");
+    } else {
+      const typeList = structure.types.map(t => `${t.name} (${t.startLine}-${t.endLine})`).join(", ");
+      parts.push(`TYPES: ${typeList}`);
     }
-    parts.push("");
   }
 
   // Variables
   if (structure.variables.length > 0) {
-    parts.push("### Variables");
-    for (const variable of structure.variables) {
-      const exported = variable.isExported ? "exported " : "";
-      parts.push(
-        `- \`${variable.name}\` (${exported}variable, lines ${variable.startLine}-${variable.endLine})`
-      );
+    if (md) {
+      parts.push("### Variables");
+      for (const variable of structure.variables) {
+        const exported = variable.isExported ? "exported " : "";
+        parts.push(
+          `- \`${variable.name}\` (${exported}variable, lines ${variable.startLine}-${variable.endLine})`
+        );
+      }
+      parts.push("");
+    } else {
+      const varList = structure.variables.map(v => v.name).join(", ");
+      parts.push(`VARIABLES: ${varList}`);
     }
-    parts.push("");
   }
 
   // Imports (collapsed)
   if (structure.imports.length > 0) {
-    parts.push(`### Imports (${structure.imports.length})`);
     const uniqueImports = [...new Set(structure.imports.map((i) => i.name))];
-    if (uniqueImports.length <= 5) {
-      for (const name of uniqueImports) {
-        parts.push(`- \`${name}\``);
+    if (md) {
+      parts.push(`### Imports (${structure.imports.length})`);
+      if (uniqueImports.length <= 5) {
+        for (const name of uniqueImports) {
+          parts.push(`- \`${name}\``);
+        }
+      } else {
+        for (const name of uniqueImports.slice(0, 3)) {
+          parts.push(`- \`${name}\``);
+        }
+        parts.push(`- ... and ${uniqueImports.length - 3} more`);
       }
+      parts.push("");
     } else {
-      for (const name of uniqueImports.slice(0, 3)) {
-        parts.push(`- \`${name}\``);
-      }
-      parts.push(`- ... and ${uniqueImports.length - 3} more`);
+      const importList = uniqueImports.slice(0, 3).join(", ");
+      const more = uniqueImports.length > 3 ? ` +${uniqueImports.length - 3}` : "";
+      parts.push(`IMPORTS: ${importList}${more}`);
     }
-    parts.push("");
   }
 
   return parts.join("\n");

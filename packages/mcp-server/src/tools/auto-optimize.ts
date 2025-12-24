@@ -15,6 +15,8 @@ import { analyzeBuildOutput } from "../parsers/index.js";
 import { groupBySignature, formatGroups, calculateStats } from "../utils/signature-grouper.js";
 import { countTokens } from "../utils/token-counter.js";
 
+type OutputFormat = "plain" | "markdown";
+
 const autoOptimizeSchema = {
   type: "object" as const,
   properties: {
@@ -31,6 +33,11 @@ const autoOptimizeSchema = {
       type: "boolean",
       description: "Aggressive mode: maximum compression even with information loss (default: false)",
     },
+    format: {
+      type: "string",
+      enum: ["plain", "markdown"],
+      description: "Output format (default: plain)",
+    },
   },
   required: ["content"],
 };
@@ -39,6 +46,7 @@ interface AutoOptimizeArgs {
   content: string;
   hint?: "build" | "logs" | "errors" | "code" | "auto";
   aggressive?: boolean;
+  format?: OutputFormat;
 }
 
 interface OptimizationResult {
@@ -77,13 +85,13 @@ function optimizeBuildOutput(content: string): OptimizationResult {
   };
 }
 
-function optimizeLogs(content: string): OptimizationResult {
+function optimizeLogs(content: string, format: OutputFormat = "plain"): OptimizationResult {
   const originalTokens = countTokens(content);
   const summarizer = getSummarizer(content);
   const summaryResult = summarizer.summarize(content, { detail: "normal" });
 
   // Format summary as text
-  const summaryText = formatLogSummary(summaryResult);
+  const summaryText = formatLogSummary(summaryResult, format);
   const optimizedTokens = countTokens(summaryText);
 
   return {
@@ -96,49 +104,63 @@ function optimizeLogs(content: string): OptimizationResult {
   };
 }
 
-function formatLogSummary(summary: import("../summarizers/types.js").LogSummary): string {
+function formatLogSummary(
+  summary: import("../summarizers/types.js").LogSummary,
+  format: OutputFormat = "plain"
+): string {
   const parts: string[] = [];
-  parts.push(`## ${summary.overview}`);
-  parts.push("");
+  const md = format === "markdown";
+
+  parts.push(md ? `## ${summary.overview}` : summary.overview);
+  if (md) parts.push("");
 
   if (summary.errors.length > 0) {
-    parts.push("### Errors");
+    if (md) parts.push("### Errors");
+    else parts.push("ERRORS:");
     for (const error of summary.errors.slice(0, 10)) {
       const count = error.count > 1 ? ` (×${error.count})` : "";
-      parts.push(`- ${error.timestamp || ""} ${error.message}${count}`);
+      const ts = error.timestamp ? `${error.timestamp} ` : "";
+      parts.push(md ? `- ${ts}${error.message}${count}` : `  ${ts}${error.message}${count}`);
     }
-    parts.push("");
+    if (md) parts.push("");
   }
 
   if (summary.warnings.length > 0) {
-    parts.push("### Warnings");
+    if (md) parts.push("### Warnings");
+    else parts.push("WARNINGS:");
     for (const warning of summary.warnings.slice(0, 5)) {
       const count = warning.count > 1 ? ` (×${warning.count})` : "";
-      parts.push(`- ${warning.timestamp || ""} ${warning.message}${count}`);
+      const ts = warning.timestamp ? `${warning.timestamp} ` : "";
+      parts.push(md ? `- ${ts}${warning.message}${count}` : `  ${ts}${warning.message}${count}`);
     }
-    parts.push("");
+    if (md) parts.push("");
   }
 
   if (summary.keyEvents.length > 0) {
-    parts.push("### Key Events");
+    if (md) parts.push("### Key Events");
+    else parts.push("KEY EVENTS:");
     for (const event of summary.keyEvents.slice(0, 5)) {
-      parts.push(`- ${event.timestamp || ""} ${event.message}`);
+      const ts = event.timestamp ? `${event.timestamp} ` : "";
+      parts.push(md ? `- ${ts}${event.message}` : `  ${ts}${event.message}`);
     }
   }
 
   return parts.join("\n");
 }
 
-function optimizeErrors(content: string): OptimizationResult {
+function optimizeErrors(content: string, format: OutputFormat = "plain"): OptimizationResult {
   const originalTokens = countTokens(content);
   const lines = content.split("\n").filter((l) => l.trim());
+  const md = format === "markdown";
 
   // Group errors by signature
   const result = groupBySignature(lines);
   const stats = calculateStats(result);
-  const formatted = formatGroups(result);
+  const formatted = formatGroups(result, format);
 
-  const header = `**${stats.originalLines} lines → ${stats.uniqueErrors} unique patterns** (${stats.totalDuplicates} duplicates removed)\n\n`;
+  const header = md
+    ? `**${stats.originalLines} lines → ${stats.uniqueErrors} unique patterns** (${stats.totalDuplicates} duplicates removed)\n\n`
+    : `${stats.originalLines} lines -> ${stats.uniqueErrors} unique patterns (${stats.totalDuplicates} duplicates removed)\n\n`;
   const optimizedContent = header + formatted;
   const optimizedTokens = countTokens(optimizedContent);
 
@@ -171,17 +193,16 @@ function optimizeGeneric(content: string, aggressive: boolean): OptimizationResu
 async function autoOptimize(
   args: AutoOptimizeArgs
 ): Promise<{ content: Array<{ type: "text"; text: string }>; isError?: boolean }> {
-  const { content, hint = "auto", aggressive = false } = args;
+  const { content, hint = "auto", aggressive = false, format = "plain" } = args;
+  const md = format === "markdown";
 
   // Minimum threshold for optimization (500 chars ~ 125 tokens)
   if (content.length < 500) {
+    const msg = md
+      ? `## Already Optimal\n\nContent is too short (${content.length} chars) to benefit from optimization.\n\n${content}`
+      : `Already Optimal: Content too short (${content.length} chars)\n\n${content}`;
     return {
-      content: [
-        {
-          type: "text",
-          text: `## Already Optimal\n\nContent is too short (${content.length} chars) to benefit from optimization.\n\n${content}`,
-        },
-      ],
+      content: [{ type: "text", text: msg }],
     };
   }
 
@@ -191,19 +212,19 @@ async function autoOptimize(
   if (hint === "build" || (hint === "auto" && isBuildOutput(content))) {
     result = optimizeBuildOutput(content);
   } else if (hint === "logs" || (hint === "auto" && detectContentType(content) === "logs")) {
-    result = optimizeLogs(content);
+    result = optimizeLogs(content, format);
   } else if (hint === "errors") {
-    result = optimizeErrors(content);
+    result = optimizeErrors(content, format);
   } else {
     // Use automatic type detection
     const detectedType: ContentType = detectContentType(content);
 
     switch (detectedType) {
       case "logs":
-        result = optimizeLogs(content);
+        result = optimizeLogs(content, format);
         break;
       case "stacktrace":
-        result = optimizeErrors(content);
+        result = optimizeErrors(content, format);
         break;
       default:
         result = optimizeGeneric(content, aggressive);
@@ -211,7 +232,8 @@ async function autoOptimize(
   }
 
   // Format output
-  const output = `## Optimized Content
+  const output = md
+    ? `## Optimized Content
 
 **Detected type:** ${result.detectedType}
 **Method:** ${result.method}
@@ -219,6 +241,11 @@ async function autoOptimize(
 
 ---
 
+${result.optimizedContent}`
+    : `Optimized Content
+Type: ${result.detectedType} | Method: ${result.method}
+Tokens: ${result.originalTokens} -> ${result.optimizedTokens} (${result.savingsPercent}% saved)
+---
 ${result.optimizedContent}`;
 
   return {

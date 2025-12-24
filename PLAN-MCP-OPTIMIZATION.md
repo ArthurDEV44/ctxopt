@@ -68,9 +68,15 @@ description: "Signatures only, no bodies"
 **Fichiers concernés**: `src/tools/smart-file-read.ts`, `src/tools/auto-optimize.ts`
 
 **Actions**:
-- [ ] Ajouter un paramètre `format: "plain" | "markdown"` (défaut: `plain`)
-- [ ] Supprimer les headers `##` et `**bold**` en mode plain
-- [ ] Retourner uniquement les données essentielles
+- [x] Ajouter un paramètre `format: "plain" | "markdown"` (défaut: `plain`)
+- [x] Supprimer les headers `##` et `**bold**` en mode plain
+- [x] Retourner uniquement les données essentielles
+
+**Implémenté le 2025-12-24**:
+- `src/tools/smart-file-read.ts` - Paramètre format ajouté, 4 fonctions de formatage modifiées
+- `src/tools/auto-optimize.ts` - Paramètre format ajouté, formatage conditionnel
+- `src/ast/index.ts` - `formatStructureSummary()` supporte format
+- `src/utils/signature-grouper.ts` - `formatGroups()` supporte format
 
 **Exemple de réponse optimisée**:
 ```
@@ -86,7 +92,7 @@ description: "Signatures only, no bodies"
 
 // APRÈS (80 tokens)
 src/server.ts (typescript, 143 lines)
-Functions: createServer (46-121), runServer (126-142)
+FUNCTIONS: createServer (46-121), runServer (126-142)
 ```
 
 **Impact estimé**: -50% tokens par réponse
