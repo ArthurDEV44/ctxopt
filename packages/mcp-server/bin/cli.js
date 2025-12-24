@@ -76,16 +76,25 @@ async function main() {
 
   switch (command) {
     case "serve": {
-      // Read config file as base (can be overridden by CLI args)
+      // Read config file as base
       const fileConfig = readConfig();
 
+      // Priority: CLI args > env vars > config file > defaults
       const config = {
         apiKey: fileConfig.apiKey,
         apiBaseUrl: fileConfig.apiBaseUrl ?? "https://app.ctxopt.dev/api",
         verbose: false,
       };
 
-      // CLI arguments override config file
+      // Environment variables override config file
+      if (process.env.CTXOPT_API_KEY) {
+        config.apiKey = process.env.CTXOPT_API_KEY;
+      }
+      if (process.env.CTXOPT_API_URL) {
+        config.apiBaseUrl = process.env.CTXOPT_API_URL;
+      }
+
+      // CLI arguments override everything
       for (const arg of args.slice(1)) {
         if (arg.startsWith("--api-key=")) {
           config.apiKey = arg.split("=")[1];
@@ -112,34 +121,9 @@ async function main() {
     }
 
     default: {
-      // Legacy support: if no command, try to run server
-      if (command?.startsWith("--")) {
-        // Read config file as base
-        const fileConfig = readConfig();
-
-        const config = {
-          apiKey: fileConfig.apiKey,
-          apiBaseUrl: fileConfig.apiBaseUrl ?? "https://app.ctxopt.dev/api",
-          verbose: false,
-        };
-
-        // CLI arguments override config file
-        for (const arg of args) {
-          if (arg.startsWith("--api-key=")) {
-            config.apiKey = arg.split("=")[1];
-          } else if (arg.startsWith("--api-url=")) {
-            config.apiBaseUrl = arg.split("=")[1];
-          } else if (arg === "--verbose") {
-            config.verbose = true;
-          }
-        }
-
-        await runServer(config);
-      } else {
-        console.error(`Unknown command: ${command}`);
-        console.error('Run "ctxopt-mcp --help" for usage information.');
-        process.exit(1);
-      }
+      console.error(`Unknown command: ${command}`);
+      console.error('Run "ctxopt-mcp --help" for usage information.');
+      process.exit(1);
     }
   }
 }

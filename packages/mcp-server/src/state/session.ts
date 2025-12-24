@@ -68,6 +68,9 @@ export interface SessionState {
   // Project info
   project: ProjectInfo | null;
 
+  // Model info (set by Claude at session start)
+  model: string | null;
+
   // Command history for pattern detection
   commandHistory: CommandEntry[];
 
@@ -80,6 +83,10 @@ export interface SessionState {
 
   // Retry patterns detected
   retryPatterns: Map<string, RetryPattern>;
+
+  // Periodic reporting state
+  lastReportedAt: Date | null;
+  lastReportedCommandCount: number;
 
   // Configuration
   verbose: boolean;
@@ -104,15 +111,22 @@ export function createSessionState(config: {
     sessionId: generateSessionId(),
     startedAt: new Date(),
     project: null,
+    model: null,
     commandHistory: [],
     tokensUsed: 0,
     tokensSaved: 0,
     errorCache: new Map(),
     retryPatterns: new Map(),
+    lastReportedAt: null,
+    lastReportedCommandCount: 0,
     verbose: config.verbose ?? false,
     apiKey: config.apiKey,
     apiBaseUrl: config.apiBaseUrl ?? "https://app.ctxopt.dev/api",
   };
+}
+
+export function setModel(state: SessionState, model: string): void {
+  state.model = model;
 }
 
 export function addCommand(state: SessionState, entry: Omit<CommandEntry, "id">): CommandEntry {
