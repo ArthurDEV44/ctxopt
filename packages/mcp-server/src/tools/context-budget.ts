@@ -26,28 +26,10 @@ import {
 export const contextBudgetSchema = {
   type: "object" as const,
   properties: {
-    content: {
-      type: "string",
-      description: "Content to analyze",
-    },
-    model: {
-      type: "string",
-      description: "Target model (default: claude-sonnet-4-20250514)",
-      enum: [
-        "claude-opus-4-20250514",
-        "claude-sonnet-4-20250514",
-        "claude-3-5-haiku-20241022",
-      ],
-    },
-    budgetTokens: {
-      type: "number",
-      description: "Max token budget to check against",
-      minimum: 50,
-    },
-    includeEstimatedOutput: {
-      type: "boolean",
-      description: "Include output estimate (default: true)",
-    },
+    content: { type: "string" },
+    model: { type: "string", enum: ["claude-opus-4-20250514", "claude-sonnet-4-20250514", "claude-3-5-haiku-20241022"] },
+    budgetTokens: { type: "number", minimum: 50 },
+    includeEstimatedOutput: { type: "boolean" },
   },
   required: ["content"],
 };
@@ -398,8 +380,7 @@ export async function executeContextBudget(
  */
 export const contextBudgetTool: ToolDefinition = {
   name: "context_budget",
-  description:
-    "Pre-flight token budget check. Estimates tokens, cost, and provides optimization recommendations.",
+  description: "Pre-flight token/cost estimation with optimization recommendations.",
   inputSchema: contextBudgetSchema,
   execute: executeContextBudget,
 };

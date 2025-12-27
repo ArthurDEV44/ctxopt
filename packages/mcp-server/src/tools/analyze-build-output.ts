@@ -12,20 +12,9 @@ import type { ToolDefinition } from "./registry.js";
 export const analyzeBuildOutputSchema = {
   type: "object" as const,
   properties: {
-    output: {
-      type: "string",
-      description: "The raw build output to analyze (from npm, tsc, webpack, etc.)",
-    },
-    buildTool: {
-      type: "string",
-      description: "Build tool type (auto-detected if not provided)",
-      enum: ["tsc", "eslint", "webpack", "vite", "esbuild", "rust", "go", "generic"],
-    },
-    verbosity: {
-      type: "string",
-      description: "Level of detail in the summary (default: normal)",
-      enum: ["minimal", "normal", "detailed"],
-    },
+    output: { type: "string" },
+    buildTool: { type: "string", enum: ["tsc", "eslint", "webpack", "vite", "esbuild", "rust", "go", "generic"] },
+    verbosity: { type: "string", enum: ["minimal", "normal", "detailed"] },
   },
   required: ["output"],
 };
@@ -70,8 +59,7 @@ export async function executeAnalyzeBuildOutput(
 
 export const analyzeBuildOutputTool: ToolDefinition = {
   name: "analyze_build_output",
-  description: `Analyze and compress build output (npm, tsc, webpack, eslint, etc.) to reduce tokens by 90%+.
-Use this tool when you have verbose build errors to get a concise summary with grouped errors and fix suggestions.`,
+  description: "Parse and group build errors (tsc, eslint, webpack). 90%+ token reduction.",
   inputSchema: analyzeBuildOutputSchema,
   execute: executeAnalyzeBuildOutput,
 };

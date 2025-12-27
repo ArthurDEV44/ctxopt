@@ -21,26 +21,10 @@ import {
 export const semanticCompressSchema = {
   type: "object" as const,
   properties: {
-    content: {
-      type: "string",
-      description: "Content to compress",
-    },
-    targetRatio: {
-      type: "number",
-      description: "Keep ratio, e.g. 0.5 = 50% (default: 0.5)",
-      minimum: 0.1,
-      maximum: 0.9,
-    },
-    preservePatterns: {
-      type: "array",
-      items: { type: "string" },
-      description: "Regex patterns to preserve",
-    },
-    model: {
-      type: "string",
-      description: "Model: fast (default)",
-      enum: ["fast"],
-    },
+    content: { type: "string" },
+    targetRatio: { type: "number", minimum: 0.1, maximum: 0.9 },
+    preservePatterns: { type: "array", items: { type: "string" } },
+    model: { type: "string", enum: ["fast"] },
   },
   required: ["content"],
 };
@@ -185,8 +169,7 @@ export async function executeSemanticCompress(
  */
 export const semanticCompressTool: ToolDefinition = {
   name: "semantic_compress",
-  description:
-    "TF-IDF based compression. Keeps important segments using position weighting and keyword detection.",
+  description: "TF-IDF compression. Keeps important segments by relevance scoring.",
   inputSchema: semanticCompressSchema,
   execute: executeSemanticCompress,
 };

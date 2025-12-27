@@ -30,29 +30,11 @@ import {
 export const smartPipelineSchema = {
   type: "object" as const,
   properties: {
-    content: {
-      type: "string",
-      description: "Content to optimize",
-    },
-    mode: {
-      type: "string",
-      description: "auto (default) or custom",
-      enum: ["auto", "custom"],
-    },
-    contentType: {
-      type: "string",
-      description: "Force type (overrides auto-detection)",
-      enum: ["build", "logs", "stacktrace", "diff", "config", "code", "generic"],
-    },
-    customPipeline: {
-      type: "array",
-      items: { type: "string" },
-      description: "Custom steps for mode=custom",
-    },
-    maxSteps: {
-      type: "number",
-      description: "Max steps (default: 5)",
-    },
+    content: { type: "string" },
+    mode: { type: "string", enum: ["auto", "custom"] },
+    contentType: { type: "string", enum: ["build", "logs", "stacktrace", "diff", "config", "code", "generic"] },
+    customPipeline: { type: "array", items: { type: "string" } },
+    maxSteps: { type: "number" },
   },
   required: ["content"],
 };
@@ -426,8 +408,7 @@ export async function executeSmartPipeline(
  */
 export const smartPipelineTool: ToolDefinition = {
   name: "smart_pipeline",
-  description:
-    "Chain compression tools based on detected content type. Auto-detects build, logs, stacktrace, diff, config, or code.",
+  description: "Chain compression tools. Auto-detects content type.",
   inputSchema: smartPipelineSchema,
   execute: executeSmartPipeline,
 };

@@ -21,39 +21,14 @@ export const conversationCompressSchema = {
       type: "array",
       items: {
         type: "object",
-        properties: {
-          role: {
-            type: "string",
-            enum: ["user", "assistant", "system"],
-            description: "Message role",
-          },
-          content: {
-            type: "string",
-            description: "Message content",
-          },
-        },
+        properties: { role: { type: "string", enum: ["user", "assistant", "system"] }, content: { type: "string" } },
         required: ["role", "content"],
       },
-      description: "Array of conversation messages to compress",
     },
-    strategy: {
-      type: "string",
-      enum: ["rolling-summary", "key-extraction", "hybrid"],
-      description:
-        "Compression strategy: rolling-summary (paragraph), key-extraction (bullet points), hybrid (both)",
-    },
-    maxTokens: {
-      type: "number",
-      description: "Target maximum tokens for output (best effort)",
-    },
-    preserveSystem: {
-      type: "boolean",
-      description: "Keep original system messages intact (default: true)",
-    },
-    preserveLastN: {
-      type: "number",
-      description: "Keep last N messages intact without compression (default: 2)",
-    },
+    strategy: { type: "string", enum: ["rolling-summary", "key-extraction", "hybrid"] },
+    maxTokens: { type: "number" },
+    preserveSystem: { type: "boolean" },
+    preserveLastN: { type: "number" },
   },
   required: ["messages", "strategy", "maxTokens"],
 };

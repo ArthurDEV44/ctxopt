@@ -16,19 +16,9 @@ import { compressDiff } from "../compressors/diff.js";
 export const diffCompressSchema = {
   type: "object" as const,
   properties: {
-    diff: {
-      type: "string",
-      description: "Git diff output",
-    },
-    strategy: {
-      type: "string",
-      description: "hunks-only, summary, or semantic",
-      enum: ["hunks-only", "summary", "semantic"],
-    },
-    maxTokens: {
-      type: "number",
-      description: "Max output tokens (for semantic)",
-    },
+    diff: { type: "string" },
+    strategy: { type: "string", enum: ["hunks-only", "summary", "semantic"] },
+    maxTokens: { type: "number" },
   },
   required: ["diff", "strategy"],
 };

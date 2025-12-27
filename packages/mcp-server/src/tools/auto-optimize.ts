@@ -20,24 +20,10 @@ type OutputFormat = "plain" | "markdown";
 const autoOptimizeSchema = {
   type: "object" as const,
   properties: {
-    content: {
-      type: "string",
-      description: "The content to optimize (command output, logs, errors, code, etc.)",
-    },
-    hint: {
-      type: "string",
-      enum: ["build", "logs", "errors", "code", "auto"],
-      description: "Hint about content type (optional, auto-detected by default)",
-    },
-    aggressive: {
-      type: "boolean",
-      description: "Aggressive mode: maximum compression even with information loss (default: false)",
-    },
-    format: {
-      type: "string",
-      enum: ["plain", "markdown"],
-      description: "Output format (default: plain)",
-    },
+    content: { type: "string" },
+    hint: { type: "string", enum: ["build", "logs", "errors", "code", "auto"] },
+    aggressive: { type: "boolean" },
+    format: { type: "string", enum: ["plain", "markdown"] },
   },
   required: ["content"],
 };
@@ -255,17 +241,7 @@ ${result.optimizedContent}`;
 
 export const autoOptimizeTool: ToolDefinition = {
   name: "auto_optimize",
-  description: `Automatically optimize any verbose content.
-
-RECOMMENDED USAGE: Call this tool after any Bash command that produces output > 500 characters.
-
-Auto-detects content type and applies appropriate optimization:
-- Build errors → grouping and deduplication (95%+ reduction)
-- Logs → intelligent summary (80-90% reduction)
-- Repetitive errors → pattern-based deduplication
-- Other content → intelligent compression (40-60% reduction)
-
-Example: After "npm run build" fails, pass the output to auto_optimize to get a structured error summary.`,
+  description: "Auto-compress verbose output (build errors, logs). 80-95% token reduction.",
   inputSchema: autoOptimizeSchema,
   execute: async (args) => autoOptimize(args as AutoOptimizeArgs),
 };

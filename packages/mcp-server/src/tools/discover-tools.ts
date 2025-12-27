@@ -11,19 +11,9 @@ import { getDynamicLoader, type ToolCategory } from "./dynamic-loader.js";
 const discoverToolsSchema = {
   type: "object" as const,
   properties: {
-    query: {
-      type: "string",
-      description: "Search query to find tools by name, keyword, or description",
-    },
-    category: {
-      type: "string",
-      enum: ["compress", "analyze", "logs", "code", "pipeline"],
-      description: "Filter by category",
-    },
-    load: {
-      type: "boolean",
-      description: "Load matched tools immediately (default: false, just list them)",
-    },
+    query: { type: "string", description: "Search by keyword" },
+    category: { type: "string", enum: ["compress", "analyze", "logs", "code", "pipeline"] },
+    load: { type: "boolean", description: "Load tools immediately" },
   },
 };
 
@@ -111,11 +101,7 @@ async function executeDiscoverTools(
 
 export const discoverToolsTool: ToolDefinition = {
   name: "discover_tools",
-  description: `Find and load available optimization tools.
-
-Categories: compress, analyze, logs, code, pipeline
-Use query to search by keyword, or category to filter.
-Set load:true to activate matched tools.`,
+  description: "Find and load optimization tools. Categories: compress, analyze, logs, code, pipeline.",
   inputSchema: discoverToolsSchema,
   execute: executeDiscoverTools,
 };

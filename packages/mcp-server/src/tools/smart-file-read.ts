@@ -111,70 +111,27 @@ function validatePath(
 export const smartFileReadSchema = {
   type: "object" as const,
   properties: {
-    filePath: {
-      type: "string",
-      description: "Path to file",
-    },
+    filePath: { type: "string", description: "Path to file" },
     target: {
       type: "object",
       properties: {
-        type: {
-          type: "string",
-          enum: ["function", "class", "interface", "type", "variable", "method"],
-          description: "Element type",
-        },
-        name: {
-          type: "string",
-          description: "Element name",
-        },
+        type: { type: "string", enum: ["function", "class", "interface", "type", "variable", "method"] },
+        name: { type: "string" },
       },
       required: ["type", "name"],
-      description: "Extract specific element",
     },
-    query: {
-      type: "string",
-      description: "Search by name or content",
-    },
-    includeImports: {
-      type: "boolean",
-      description: "Include imports (default: true)",
-    },
-    includeComments: {
-      type: "boolean",
-      description: "Include docs (default: true)",
-    },
+    query: { type: "string" },
     lines: {
       type: "object",
-      properties: {
-        start: {
-          type: "number",
-          description: "Start line",
-        },
-        end: {
-          type: "number",
-          description: "End line",
-        },
-      },
+      properties: { start: { type: "number" }, end: { type: "number" } },
       required: ["start", "end"],
-      description: "Line range",
     },
-    skeleton: {
-      type: "boolean",
-      description: "Signatures only, no bodies",
-    },
-    cache: {
-      type: "boolean",
-      description: "Use cache (default: true)",
-    },
-    language: {
-      type: "string",
-      description: "Force language (ts, js, py, go, rust, php, swift)",
-    },
-    format: {
-      type: "string",
-      enum: ["plain", "markdown"],
-      description: "Output format (default: plain)",
-    },
+    skeleton: { type: "boolean" },
+    cache: { type: "boolean" },
+    language: { type: "string" },
+    format: { type: "string", enum: ["plain", "markdown"] },
+    includeImports: { type: "boolean" },
+    includeComments: { type: "boolean" },
   },
   required: ["filePath"],
 };
@@ -620,8 +577,7 @@ export async function executeSmartFileRead(
 
 export const smartFileReadTool: ToolDefinition = {
   name: "smart_file_read",
-  description:
-    "Read files with AST extraction. Modes: structure (default), target, query, lines, skeleton. Supports TS, JS, Python, Go, Rust, PHP, Swift.",
+  description: "Read code with AST extraction. Modes: structure, target, query, lines, skeleton.",
   inputSchema: smartFileReadSchema,
   execute: executeSmartFileRead,
 };

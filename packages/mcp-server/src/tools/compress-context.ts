@@ -14,29 +14,11 @@ import type { ToolDefinition } from "./registry.js";
 export const compressContextSchema = {
   type: "object" as const,
   properties: {
-    content: {
-      type: "string",
-      description: "The text content to compress (logs, stack trace, config, etc.)",
-    },
-    contentType: {
-      type: "string",
-      description: "Type of content (auto-detected if not provided)",
-      enum: ["logs", "stacktrace", "config", "code", "generic"],
-    },
-    targetRatio: {
-      type: "number",
-      description: "Target compression ratio (0.1 = keep 10% of original). Optional hint.",
-    },
-    preservePatterns: {
-      type: "array",
-      items: { type: "string" },
-      description: "Regex patterns to preserve (lines matching these won't be compressed)",
-    },
-    detail: {
-      type: "string",
-      description: "Level of detail in output (default: normal)",
-      enum: ["minimal", "normal", "detailed"],
-    },
+    content: { type: "string" },
+    contentType: { type: "string", enum: ["logs", "stacktrace", "config", "code", "generic"] },
+    targetRatio: { type: "number" },
+    preservePatterns: { type: "array", items: { type: "string" } },
+    detail: { type: "string", enum: ["minimal", "normal", "detailed"] },
   },
   required: ["content"],
 };
@@ -131,9 +113,7 @@ export async function executeCompressContext(
 
 export const compressContextTool: ToolDefinition = {
   name: "compress_context",
-  description: `Compress verbose text content (logs, stack traces, configs) to reduce tokens by 40-90%.
-Use this tool when you have large outputs that would consume too many tokens.
-Auto-detects content type and applies the best compression strategy.`,
+  description: "Compress verbose text (logs, stack traces, configs). 40-90% reduction.",
   inputSchema: compressContextSchema,
   execute: executeCompressContext,
 };

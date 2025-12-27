@@ -17,40 +17,12 @@ import { getGlobalCache, type CacheStats } from "../cache/index.js";
 export const smartCacheSchema = {
   type: "object" as const,
   properties: {
-    action: {
-      type: "string",
-      enum: [
-        "get",
-        "set",
-        "invalidate",
-        "invalidate_path",
-        "stats",
-        "clear",
-        "keys",
-      ],
-      description: "The cache operation to perform",
-    },
-    key: {
-      type: "string",
-      description: "Cache key (required for get, set, invalidate)",
-    },
-    value: {
-      type: "string",
-      description: "Value to cache (required for set action, as JSON string)",
-    },
-    filePath: {
-      type: "string",
-      description:
-        "File path for hash validation (optional for set, required for invalidate_path)",
-    },
-    ttl: {
-      type: "number",
-      description: "Time-to-live in milliseconds (optional for set)",
-    },
-    tokenCount: {
-      type: "number",
-      description: "Token count for stats tracking (optional for set)",
-    },
+    action: { type: "string", enum: ["get", "set", "invalidate", "invalidate_path", "stats", "clear", "keys"] },
+    key: { type: "string" },
+    value: { type: "string" },
+    filePath: { type: "string" },
+    ttl: { type: "number" },
+    tokenCount: { type: "number" },
   },
   required: ["action"],
 };
@@ -263,8 +235,7 @@ export async function executeSmartCache(
 
 export const smartCacheTool: ToolDefinition = {
   name: "smart_cache",
-  description:
-    "Manage parsed file cache. Actions: get, set, invalidate, invalidate_path, stats, clear, keys.",
+  description: "Manage cache. Actions: get, set, invalidate, stats, clear, keys.",
   inputSchema: smartCacheSchema,
   execute: executeSmartCache,
 };

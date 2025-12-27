@@ -18,22 +18,10 @@ import {
 export const deduplicateErrorsSchema = {
   type: "object" as const,
   properties: {
-    content: {
-      type: "string",
-      description: "Content with potentially duplicated errors (build output, test results, logs)",
-    },
-    threshold: {
-      type: "number",
-      description: "Minimum occurrences to consider as duplicate (default: 2)",
-    },
-    keepFirst: {
-      type: "number",
-      description: "Number of first unique occurrences to keep in full (default: 1)",
-    },
-    errorPattern: {
-      type: "string",
-      description: "Custom regex pattern to identify error lines (optional)",
-    },
+    content: { type: "string" },
+    threshold: { type: "number" },
+    keepFirst: { type: "number" },
+    errorPattern: { type: "string" },
   },
   required: ["content"],
 };

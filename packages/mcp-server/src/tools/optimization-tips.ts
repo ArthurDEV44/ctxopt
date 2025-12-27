@@ -4,11 +4,7 @@ import type { ServerConfig } from "../server";
 export const optimizationTipsSchema = {
   type: "object" as const,
   properties: {
-    focus: {
-      type: "string",
-      description: "Specific area to get tips for",
-      enum: ["general", "prompts", "context", "cost", "performance"],
-    },
+    focus: { type: "string", enum: ["general", "prompts", "context", "cost", "performance"] },
   },
   required: [],
 };

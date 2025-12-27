@@ -22,36 +22,11 @@ import { detectLogType } from "../utils/log-parser.js";
 export const summarizeLogsSchema = {
   type: "object" as const,
   properties: {
-    logs: {
-      type: "string",
-      description: "The log content to summarize",
-    },
-    logType: {
-      type: "string",
-      description: "Type of log (auto-detected if not provided)",
-      enum: ["server", "test", "build", "application", "generic"],
-    },
-    focus: {
-      type: "array",
-      description: "Areas to focus on in the summary",
-      items: {
-        type: "string",
-        enum: ["errors", "warnings", "performance", "timeline"],
-      },
-    },
-    detail: {
-      type: "string",
-      description: "Level of detail in the summary (default: normal)",
-      enum: ["minimal", "normal", "detailed"],
-    },
-    timeframe: {
-      type: "object",
-      description: "Time range filter (if timestamps are present)",
-      properties: {
-        start: { type: "string", description: "Start time" },
-        end: { type: "string", description: "End time" },
-      },
-    },
+    logs: { type: "string" },
+    logType: { type: "string", enum: ["server", "test", "build", "application", "generic"] },
+    focus: { type: "array", items: { type: "string", enum: ["errors", "warnings", "performance", "timeline"] } },
+    detail: { type: "string", enum: ["minimal", "normal", "detailed"] },
+    timeframe: { type: "object", properties: { start: { type: "string" }, end: { type: "string" } } },
   },
   required: ["logs"],
 };

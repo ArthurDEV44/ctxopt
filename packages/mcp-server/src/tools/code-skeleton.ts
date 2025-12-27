@@ -19,24 +19,10 @@ import type { FileStructure } from "../ast/types.js";
 export const codeSkeletonSchema = {
   type: "object" as const,
   properties: {
-    filePath: {
-      type: "string",
-      description: "Path to the source file",
-    },
-    includeTypes: {
-      type: "boolean",
-      description: "Include type definitions and interfaces (default: true)",
-    },
-    includeComments: {
-      type: "boolean",
-      description: "Include JSDoc/docstring comments (default: true)",
-    },
-    depth: {
-      type: "number",
-      enum: [1, 2, 3],
-      description:
-        "Detail level: 1=signatures only, 2=+docs preview, 3=+full signatures with docs",
-    },
+    filePath: { type: "string" },
+    includeTypes: { type: "boolean" },
+    includeComments: { type: "boolean" },
+    depth: { type: "number", enum: [1, 2, 3] },
   },
   required: ["filePath"],
 };
@@ -253,8 +239,7 @@ export async function executeCodeSkeleton(
  */
 export const codeSkeletonTool: ToolDefinition = {
   name: "code_skeleton",
-  description:
-    "Extract signatures only (no bodies). Depth: 1=minimal, 2=+docs, 3=full. Supports TS, JS, Python, Go, Rust, PHP, Swift.",
+  description: "Extract signatures only (no bodies). Depth: 1=minimal, 2=+docs, 3=full.",
   inputSchema: codeSkeletonSchema,
   execute: executeCodeSkeleton,
 };
