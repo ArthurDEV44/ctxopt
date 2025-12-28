@@ -1,7 +1,7 @@
 /**
  * Sandbox Module
  *
- * Provides safe code execution with ctxopt SDK.
+ * Provides safe code execution with Distill SDK.
  */
 
 export { executeSandbox } from "./executor.js";

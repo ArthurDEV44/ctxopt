@@ -1,6 +1,6 @@
-name: 'CtxOpt Analyze'
+name: 'Distill Analyze'
 description: 'Analyze codebase for token optimization opportunities'
-author: 'CtxOpt'
+author: 'Distill'
 branding:
   icon: 'zap'
   color: 'blue'
@@ -41,9 +41,9 @@ runs:
       with:
         node-version: '20'
 
-    - name: Install ctxopt-mcp
+    - name: Install distill-mcp
       shell: bash
-      run: npm install -g @anthropic-ai/ctxopt-mcp
+      run: npm install -g @anthropic-ai/distill-mcp
 
     - name: Run analysis
       id: analyze
@@ -54,17 +54,17 @@ runs:
           OUTPUT_ARGS="--output ${{ inputs.output-file }} --json"
         fi
 
-        ctxopt-mcp analyze \
+        distill-mcp analyze \
           --patterns "${{ inputs.patterns }}" \
           --threshold ${{ inputs.threshold }} \
           $OUTPUT_ARGS \
-          --json > /tmp/ctxopt-report.json 2>&1 || true
+          --json > /tmp/distill-report.json 2>&1 || true
 
         # Parse results
-        if [ -f /tmp/ctxopt-report.json ]; then
-          TOTAL_FILES=$(jq -r '.totalFiles // 0' /tmp/ctxopt-report.json)
-          TOTAL_TOKENS=$(jq -r '.totalTokens // 0' /tmp/ctxopt-report.json)
-          FILES_ABOVE=$(jq -r '.filesAboveThreshold // 0' /tmp/ctxopt-report.json)
+        if [ -f /tmp/distill-report.json ]; then
+          TOTAL_FILES=$(jq -r '.totalFiles // 0' /tmp/distill-report.json)
+          TOTAL_TOKENS=$(jq -r '.totalTokens // 0' /tmp/distill-report.json)
+          FILES_ABOVE=$(jq -r '.filesAboveThreshold // 0' /tmp/distill-report.json)
 
           echo "total-files=$TOTAL_FILES" >> $GITHUB_OUTPUT
           echo "total-tokens=$TOTAL_TOKENS" >> $GITHUB_OUTPUT
@@ -84,13 +84,13 @@ runs:
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Files Exceeding Threshold" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
-            jq -r '.files[] | select(.exceedsThreshold) | "- \(.file): \(.tokens) tokens"' /tmp/ctxopt-report.json >> $GITHUB_STEP_SUMMARY
+            jq -r '.files[] | select(.exceedsThreshold) | "- \(.file): \(.tokens) tokens"' /tmp/distill-report.json >> $GITHUB_STEP_SUMMARY
           fi
         fi
 
         # Copy to output file if specified
         if [ -n "${{ inputs.output-file }}" ]; then
-          cp /tmp/ctxopt-report.json "${{ inputs.output-file }}"
+          cp /tmp/distill-report.json "${{ inputs.output-file }}"
           echo "report-path=${{ inputs.output-file }}" >> $GITHUB_OUTPUT
         fi
 

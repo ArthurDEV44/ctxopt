@@ -1,11 +1,11 @@
 ---
 title: Troubleshooting
-description: Common issues and solutions for CtxOpt
+description: Common issues and solutions for Distill
 ---
 
 # Troubleshooting
 
-Solutions to common issues when using CtxOpt.
+Solutions to common issues when using Distill.
 
 ## Installation Issues
 
@@ -31,7 +31,7 @@ nvm use 18
 
 ```bash
 # Option 1: Use npx instead of global install
-npx @ctxopt/mcp-server serve
+npx distill-mcp serve
 
 # Option 2: Fix npm permissions (macOS/Linux)
 mkdir ~/.npm-global
@@ -41,7 +41,7 @@ export PATH=~/.npm-global/bin:$PATH
 
 ### Command Not Found
 
-**Error:** `ctxopt-mcp: command not found`
+**Error:** `distill-mcp: command not found`
 
 **Solution:** The global npm bin is not in your PATH:
 
@@ -57,7 +57,7 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 
 ### MCP Server Not Starting
 
-**Symptoms:** IDE doesn't show CtxOpt tools
+**Symptoms:** IDE doesn't show Distill tools
 
 **Solutions:**
 
@@ -73,12 +73,12 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 
 3. **Test server manually:**
    ```bash
-   npx @ctxopt/mcp-server serve --verbose
+   npx distill-mcp serve --verbose
    ```
 
 4. **Run doctor:**
    ```bash
-   ctxopt-mcp doctor
+   distill-mcp doctor
    ```
 
 ### Tools Not Appearing
@@ -102,9 +102,9 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "node",
-      "args": ["--max-old-space-size=4096", "npx", "@ctxopt/mcp-server"]
+      "args": ["--max-old-space-size=4096", "npx", "distill-mcp"]
     }
   }
 }
@@ -156,10 +156,10 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 
 If you can't resolve an issue:
 
-1. Run `ctxopt-mcp doctor` and include output
-2. Check [GitHub Issues](https://github.com/ctxopt/ctxopt/issues)
+1. Run `distill-mcp doctor` and include output
+2. Check [GitHub Issues](https://github.com/ArthurDEV44/ctxopt/issues)
 3. Open a new issue with:
-   - CtxOpt version (`ctxopt-mcp --version`)
+   - Distill version (`distill-mcp --version`)
    - Node.js version (`node --version`)
    - IDE and version
    - Error messages

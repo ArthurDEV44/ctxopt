@@ -28,7 +28,7 @@ describe("Lazy MCP Pattern", () => {
       const result = await browseToolsTool.execute({});
       const text = result.content[0]?.text ?? "";
 
-      expect(text).toContain("ctxopt/");
+      expect(text).toContain("distill/");
       expect(text).toContain("compress/");
       expect(text).toContain("analyze/");
       expect(text).toContain("logs/");
@@ -40,7 +40,7 @@ describe("Lazy MCP Pattern", () => {
       const result = await browseToolsTool.execute({ category: "compress" });
       const text = result.content[0]?.text ?? "";
 
-      expect(text).toContain("ctxopt/compress/");
+      expect(text).toContain("distill/compress/");
       expect(text).toContain("compress_context");
       expect(text).toContain("semantic_compress");
     });

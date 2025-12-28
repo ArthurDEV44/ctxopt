@@ -1,12 +1,12 @@
-# CtxOpt MCP Server Installation Script for Windows
-# https://ctxopt.dev
+# Distill MCP Server Installation Script for Windows
+# https://distill.dev
 #
 # Usage:
-#   irm https://ctxopt.dev/install.ps1 | iex
+#   irm https://distill.dev/install.ps1 | iex
 #
 # This script will:
 #   1. Detect your package manager
-#   2. Install @ctxopt/mcp-server globally
+#   2. Install distill-mcp globally
 #   3. Auto-configure detected IDEs (Claude Code, Cursor, Windsurf)
 #   4. Verify the installation
 
@@ -50,13 +50,13 @@ function Test-NodeVersion {
 function Install-Package {
     param([string]$PackageManager)
 
-    Write-Info "Installing @ctxopt/mcp-server using $PackageManager..."
+    Write-Info "Installing distill-mcp using $PackageManager..."
 
     switch ($PackageManager) {
-        "bun" { bun install -g @ctxopt/mcp-server }
-        "npm" { npm install -g @ctxopt/mcp-server }
-        "yarn" { yarn global add @ctxopt/mcp-server }
-        "pnpm" { pnpm add -g @ctxopt/mcp-server }
+        "bun" { bun install -g distill-mcp }
+        "npm" { npm install -g distill-mcp }
+        "yarn" { yarn global add distill-mcp }
+        "pnpm" { pnpm add -g distill-mcp }
         default {
             Write-Error "No supported package manager found."
             Write-Host ""
@@ -74,7 +74,7 @@ function Install-Package {
 function Main {
     Write-Host ""
     Write-Host "================================================" -ForegroundColor Cyan
-    Write-Host "     CtxOpt MCP Server Installation" -ForegroundColor Cyan
+    Write-Host "     Distill MCP Server Installation" -ForegroundColor Cyan
     Write-Host "================================================" -ForegroundColor Cyan
     Write-Host ""
 
@@ -96,12 +96,12 @@ function Main {
 
     # Verify installation
     Write-Host ""
-    if (Get-Command ctxopt-mcp -ErrorAction SilentlyContinue) {
-        $version = ctxopt-mcp --version 2>$null
+    if (Get-Command distill-mcp -ErrorAction SilentlyContinue) {
+        $version = distill-mcp --version 2>$null
         if (-not $version) { $version = "unknown" }
-        Write-Success "ctxopt-mcp v$version is now available"
+        Write-Success "distill-mcp v$version is now available"
     } else {
-        Write-Warning "ctxopt-mcp not found in PATH. You may need to restart your terminal."
+        Write-Warning "distill-mcp not found in PATH. You may need to restart your terminal."
     }
 
     # Run setup
@@ -109,11 +109,11 @@ function Main {
     Write-Info "Configuring IDEs..."
     Write-Host ""
 
-    if (Get-Command ctxopt-mcp -ErrorAction SilentlyContinue) {
-        ctxopt-mcp setup
+    if (Get-Command distill-mcp -ErrorAction SilentlyContinue) {
+        distill-mcp setup
     } else {
         # Fallback to npx if global install didn't add to PATH yet
-        npx @ctxopt/mcp-server setup
+        npx distill-mcp setup
     }
 
     # Final message
@@ -122,10 +122,10 @@ function Main {
     Write-Host ""
     Write-Host "Next steps:"
     Write-Host "  1. Restart your IDE to load the MCP server"
-    Write-Host "  2. Run 'ctxopt-mcp doctor' to verify everything is working"
+    Write-Host "  2. Run 'distill-mcp doctor' to verify everything is working"
     Write-Host ""
     Write-Host "Documentation: " -NoNewline
-    Write-Host "https://ctxopt.dev/docs" -ForegroundColor Cyan
+    Write-Host "https://distill.dev/docs" -ForegroundColor Cyan
     Write-Host ""
 }
 

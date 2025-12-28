@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# CtxOpt MCP Server Installation Script
-# https://ctxopt.dev
+# Distill MCP Server Installation Script
+# https://distill.dev
 #
 # Usage:
-#   curl -fsSL https://ctxopt.dev/install.sh | bash
+#   curl -fsSL https://distill.dev/install.sh | bash
 #
 # This script will:
 #   1. Detect your OS and package manager
-#   2. Install @ctxopt/mcp-server globally
+#   2. Install distill-mcp globally
 #   3. Auto-configure detected IDEs (Claude Code, Cursor, Windsurf)
 #   4. Verify the installation
 
@@ -92,20 +92,20 @@ check_node() {
 install_package() {
     local pm=$1
 
-    log "Installing @ctxopt/mcp-server using $pm..."
+    log "Installing distill-mcp using $pm..."
 
     case "$pm" in
         bun)
-            bun install -g @ctxopt/mcp-server
+            bun install -g distill-mcp
             ;;
         npm)
-            npm install -g @ctxopt/mcp-server
+            npm install -g distill-mcp
             ;;
         yarn)
-            yarn global add @ctxopt/mcp-server
+            yarn global add distill-mcp
             ;;
         pnpm)
-            pnpm add -g @ctxopt/mcp-server
+            pnpm add -g distill-mcp
             ;;
         *)
             error "No supported package manager found."
@@ -125,7 +125,7 @@ install_package() {
 main() {
     echo ""
     echo -e "${BOLD}${CYAN}╔══════════════════════════════════════════╗${NC}"
-    echo -e "${BOLD}${CYAN}║     CtxOpt MCP Server Installation       ║${NC}"
+    echo -e "${BOLD}${CYAN}║     Distill MCP Server Installation       ║${NC}"
     echo -e "${BOLD}${CYAN}╚══════════════════════════════════════════╝${NC}"
     echo ""
 
@@ -148,11 +148,11 @@ main() {
 
     # Verify installation
     echo ""
-    if command -v ctxopt-mcp &> /dev/null; then
-        VERSION=$(ctxopt-mcp --version 2>/dev/null || echo "unknown")
-        success "ctxopt-mcp v$VERSION is now available"
+    if command -v distill-mcp &> /dev/null; then
+        VERSION=$(distill-mcp --version 2>/dev/null || echo "unknown")
+        success "distill-mcp v$VERSION is now available"
     else
-        warn "ctxopt-mcp not found in PATH. You may need to restart your terminal."
+        warn "distill-mcp not found in PATH. You may need to restart your terminal."
     fi
 
     # Run setup
@@ -160,11 +160,11 @@ main() {
     log "Configuring IDEs..."
     echo ""
 
-    if command -v ctxopt-mcp &> /dev/null; then
-        ctxopt-mcp setup
+    if command -v distill-mcp &> /dev/null; then
+        distill-mcp setup
     else
         # Fallback to npx if global install didn't add to PATH yet
-        npx @ctxopt/mcp-server setup
+        npx distill-mcp setup
     fi
 
     # Final message
@@ -173,9 +173,9 @@ main() {
     echo ""
     echo "Next steps:"
     echo "  1. Restart your IDE to load the MCP server"
-    echo "  2. Run 'ctxopt-mcp doctor' to verify everything is working"
+    echo "  2. Run 'distill-mcp doctor' to verify everything is working"
     echo ""
-    echo -e "Documentation: ${CYAN}https://ctxopt.dev/docs${NC}"
+    echo -e "Documentation: ${CYAN}https://distill.dev/docs${NC}"
     echo ""
 }
 

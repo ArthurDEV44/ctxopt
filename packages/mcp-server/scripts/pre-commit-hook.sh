@@ -1,12 +1,12 @@
 #!/bin/bash
 #
-# CtxOpt Pre-commit Hook
+# Distill Pre-commit Hook
 #
 # Warns about files with high token counts that may cause issues
 # with AI coding assistants.
 #
 # Installation:
-#   ctxopt-mcp setup --hooks
+#   distill-mcp setup --hooks
 #   OR
 #   cp scripts/pre-commit-hook.sh .git/hooks/pre-commit
 #   chmod +x .git/hooks/pre-commit
@@ -24,17 +24,17 @@ GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
-# Check if ctxopt-mcp is installed
-if ! command -v ctxopt-mcp &> /dev/null; then
+# Check if distill-mcp is installed
+if ! command -v distill-mcp &> /dev/null; then
     # Try npx as fallback
     if command -v npx &> /dev/null; then
-        CTXOPT_CMD="npx @anthropic-ai/ctxopt-mcp"
+        CTXOPT_CMD="npx @anthropic-ai/distill-mcp"
     else
-        echo -e "${YELLOW}Warning: ctxopt-mcp not found. Skipping token analysis.${NC}"
+        echo -e "${YELLOW}Warning: distill-mcp not found. Skipping token analysis.${NC}"
         exit 0
     fi
 else
-    CTXOPT_CMD="ctxopt-mcp"
+    CTXOPT_CMD="distill-mcp"
 fi
 
 # Get staged files (only source code files)
@@ -54,7 +54,7 @@ for file in $STAGED_FILES; do
     fi
 
     # Get token count using a simple wc-based estimate
-    # More accurate counting requires the full ctxopt-mcp analyze
+    # More accurate counting requires the full distill-mcp analyze
     LINES=$(wc -l < "$file" 2>/dev/null || echo "0")
     WORDS=$(wc -w < "$file" 2>/dev/null || echo "0")
 
@@ -72,7 +72,7 @@ done
 if [ "$WARNINGS" -gt 0 ]; then
     echo ""
     echo -e "${YELLOW}$WARNINGS file(s) may have high token counts.${NC}"
-    echo -e "Consider using CtxOpt tools when working with these files:"
+    echo -e "Consider using Distill tools when working with these files:"
     echo -e "  - ${CYAN}smart_file_read${NC}: Extract specific functions/classes"
     echo -e "  - ${CYAN}code_skeleton${NC}: Get signatures only"
     echo ""

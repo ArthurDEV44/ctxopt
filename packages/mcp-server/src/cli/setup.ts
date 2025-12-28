@@ -5,7 +5,7 @@ import {
   readJSONFile,
   writeJSONFile,
   getMCPServerConfig,
-  isCtxOptConfigured,
+  isDistillConfigured,
   success,
   warn,
   error,
@@ -28,13 +28,13 @@ function configureIDE(ide: IDE, config: IDEConfig, force: boolean): boolean {
 
   const existingConfig = readJSONFile(config.configPath) || {};
 
-  if (isCtxOptConfigured(existingConfig) && !force) {
-    warn(`CtxOpt already configured in ${config.name}. Use --force to overwrite.`);
+  if (isDistillConfigured(existingConfig) && !force) {
+    warn(`Distill already configured in ${config.name}. Use --force to overwrite.`);
     return true;
   }
 
   const mcpServers = (existingConfig.mcpServers as Record<string, unknown>) || {};
-  mcpServers.ctxopt = getMCPServerConfig();
+  mcpServers.distill = getMCPServerConfig();
   existingConfig.mcpServers = mcpServers;
 
   if (writeJSONFile(config.configPath, existingConfig)) {
@@ -47,7 +47,7 @@ function configureIDE(ide: IDE, config: IDEConfig, force: boolean): boolean {
 }
 
 export async function setup(options: SetupOptions = {}): Promise<void> {
-  log(`\n${COLORS.bright}${COLORS.cyan}CtxOpt MCP Server Setup${COLORS.reset}\n`);
+  log(`\n${COLORS.bright}${COLORS.cyan}Distill MCP Server Setup${COLORS.reset}\n`);
 
   const ideConfigs = detectInstalledIDEs();
   const specificIDEs = options.claude || options.cursor || options.windsurf;
@@ -81,9 +81,9 @@ export async function setup(options: SetupOptions = {}): Promise<void> {
     log("  • Cursor");
     log("  • Windsurf");
     log("\nYou can manually configure by running:");
-    log("  ctxopt-mcp setup --claude");
-    log("  ctxopt-mcp setup --cursor");
-    log("  ctxopt-mcp setup --windsurf");
+    log("  distill-mcp setup --claude");
+    log("  distill-mcp setup --cursor");
+    log("  distill-mcp setup --windsurf");
     return;
   }
 
@@ -120,8 +120,8 @@ export async function setup(options: SetupOptions = {}): Promise<void> {
 
   log(`\n${COLORS.dim}Next steps:${COLORS.reset}`);
   log("  1. Restart your IDE to load the MCP server");
-  log("  2. Run 'ctxopt-mcp doctor' to verify the installation");
-  log(`  3. Visit ${COLORS.cyan}https://ctxopt.dev/docs${COLORS.reset} for documentation\n`);
+  log("  2. Run 'distill-mcp doctor' to verify the installation");
+  log(`  3. Visit ${COLORS.cyan}https://distill.dev/docs${COLORS.reset} for documentation\n`);
 }
 
 export function parseSetupArgs(args: string[]): SetupOptions {

@@ -1,21 +1,21 @@
 ---
 title: Windsurf Integration
-description: Step-by-step guide to integrate CtxOpt with Windsurf
+description: Step-by-step guide to integrate Distill with Windsurf
 ---
 
 # Windsurf Integration
 
-This guide walks you through setting up CtxOpt with Windsurf IDE.
+This guide walks you through setting up Distill with Windsurf IDE.
 
 ## Prerequisites
 
 - Windsurf installed ([download](https://codeium.com/windsurf))
 - Node.js 18+ installed
 
-## Step 1: Install CtxOpt
+## Step 1: Install Distill
 
 ```bash
-npm install -g @ctxopt/mcp-server
+npm install -g distill-mcp
 ```
 
 ## Step 2: Configure MCP
@@ -25,9 +25,9 @@ Edit your Windsurf MCP configuration file at `~/.windsurf/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"]
+      "args": ["distill-mcp"]
     }
   }
 }
@@ -47,7 +47,7 @@ Ask Windsurf's AI to check available tools:
 List the MCP tools available
 ```
 
-## Using CtxOpt with Windsurf
+## Using Distill with Windsurf
 
 ### Smart File Analysis
 
@@ -75,7 +75,7 @@ Deduplicate these errors: [paste build output]
 
 1. Check the config file location: `~/.windsurf/mcp.json`
 2. Validate JSON syntax
-3. Run `ctxopt-mcp doctor` to check installation
+3. Run `distill-mcp doctor` to check installation
 
 ### Permission Errors
 

@@ -1,11 +1,11 @@
 ---
 title: Installation
-description: Install and configure CtxOpt MCP Server
+description: Install and configure Distill MCP Server
 ---
 
 # Installation
 
-CtxOpt MCP Server can be installed globally or run directly with npx.
+Distill MCP Server can be installed globally or run directly with npx.
 
 ## Prerequisites
 
@@ -17,14 +17,14 @@ CtxOpt MCP Server can be installed globally or run directly with npx.
 ### Global Installation (Recommended)
 
 ```bash
-npm install -g @ctxopt/mcp-server
+npm install -g distill-mcp
 ```
 
 After installation, verify it works:
 
 ```bash
-ctxopt-mcp --version
-ctxopt-mcp doctor
+distill-mcp --version
+distill-mcp doctor
 ```
 
 ### Run with npx
@@ -32,14 +32,14 @@ ctxopt-mcp doctor
 No installation needed - run directly:
 
 ```bash
-npx @ctxopt/mcp-server serve
+npx distill-mcp serve
 ```
 
 ### From Source
 
 ```bash
-git clone https://github.com/ctxopt/ctxopt
-cd ctxopt
+git clone https://github.com/ArthurDEV44/ctxopt
+cd distill
 bun install
 bun run build
 ```
@@ -55,9 +55,9 @@ Edit `~/.claude/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"]
+      "args": ["distill-mcp"]
     }
   }
 }
@@ -68,8 +68,8 @@ Or with global install:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
-      "command": "ctxopt-mcp",
+    "distill": {
+      "command": "distill-mcp",
       "args": ["serve"]
     }
   }
@@ -82,9 +82,9 @@ Edit Cursor's MCP settings (Settings > MCP Servers):
 
 ```json
 {
-  "ctxopt": {
+  "distill": {
     "command": "npx",
-    "args": ["@ctxopt/mcp-server"]
+    "args": ["distill-mcp"]
   }
 }
 ```
@@ -96,9 +96,9 @@ Edit `~/.windsurf/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"]
+      "args": ["distill-mcp"]
     }
   }
 }
@@ -109,7 +109,7 @@ Edit `~/.windsurf/mcp.json`:
 Run the doctor command to verify everything is configured:
 
 ```bash
-ctxopt-mcp doctor
+distill-mcp doctor
 ```
 
 This checks:
@@ -120,10 +120,10 @@ This checks:
 ## CLI Commands
 
 ```bash
-ctxopt-mcp serve      # Start the MCP server
-ctxopt-mcp setup      # Auto-configure IDEs
-ctxopt-mcp doctor     # Check installation
-ctxopt-mcp --help     # Show all commands
+distill-mcp serve      # Start the MCP server
+distill-mcp setup      # Auto-configure IDEs
+distill-mcp doctor     # Check installation
+distill-mcp --help     # Show all commands
 ```
 
 ## Next Steps

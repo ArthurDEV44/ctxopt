@@ -1,21 +1,21 @@
 ---
 title: Claude Code Integration
-description: Step-by-step guide to integrate CtxOpt with Claude Code
+description: Step-by-step guide to integrate Distill with Claude Code
 ---
 
 # Claude Code Integration
 
-This guide walks you through setting up CtxOpt with Claude Code.
+This guide walks you through setting up Distill with Claude Code.
 
 ## Prerequisites
 
 - Claude Code installed ([download](https://claude.ai/code))
 - Node.js 18+ installed
 
-## Step 1: Install CtxOpt
+## Step 1: Install Distill
 
 ```bash
-npm install -g @ctxopt/mcp-server
+npm install -g distill-mcp
 ```
 
 ## Step 2: Configure MCP
@@ -25,9 +25,9 @@ Edit your Claude Code MCP configuration file at `~/.claude/mcp.json`:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"]
+      "args": ["distill-mcp"]
     }
   }
 }
@@ -38,8 +38,8 @@ Or if you installed globally:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
-      "command": "ctxopt-mcp",
+    "distill": {
+      "command": "distill-mcp",
       "args": ["serve"]
     }
   }
@@ -48,7 +48,7 @@ Or if you installed globally:
 
 ## Step 3: Restart Claude Code
 
-Close and reopen Claude Code. You should see "CtxOpt MCP Server running on stdio" in the logs.
+Close and reopen Claude Code. You should see "Distill MCP Server running on stdio" in the logs.
 
 ## Step 4: Verify
 
@@ -60,7 +60,7 @@ Run the session_stats tool
 
 You should see session statistics including tokens used and saved.
 
-## Using CtxOpt Tools
+## Using Distill Tools
 
 ### Smart File Reading
 
@@ -88,7 +88,7 @@ Show my session stats with detailed breakdown
 
 ## Recommended CLAUDE.md Setup
 
-Add this to your project's `CLAUDE.md` to enforce CtxOpt usage:
+Add this to your project's `CLAUDE.md` to enforce Distill usage:
 
 ```markdown
 ## MCP Tool Usage
@@ -105,10 +105,10 @@ At session start:
 
 ## Installing Project Hooks
 
-CtxOpt can install hooks that remind you to use optimization tools:
+Distill can install hooks that remind you to use optimization tools:
 
 ```bash
-ctxopt-mcp setup --hooks
+distill-mcp setup --hooks
 ```
 
 This adds hooks to your project that:
@@ -121,19 +121,19 @@ This adds hooks to your project that:
 ### MCP Server Not Starting
 
 1. Check Node.js version: `node --version` (needs 18+)
-2. Run doctor: `ctxopt-mcp doctor`
+2. Run doctor: `distill-mcp doctor`
 3. Check logs in Claude Code's output panel
 
 ### Tools Not Appearing
 
 1. Restart Claude Code completely
 2. Verify `mcp.json` syntax is valid JSON
-3. Try running `npx @ctxopt/mcp-server serve` manually to check for errors
+3. Try running `npx distill-mcp serve` manually to check for errors
 
 ### Permission Issues
 
 On macOS/Linux, you may need to make the command executable:
 
 ```bash
-chmod +x $(which ctxopt-mcp)
+chmod +x $(which distill-mcp)
 ```

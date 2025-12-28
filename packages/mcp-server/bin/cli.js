@@ -12,15 +12,15 @@ const command = args[0];
 function showHelp() {
   const version = getPackageVersion();
   console.log(`
-${COLORS.bright}${COLORS.cyan}CtxOpt MCP Server${COLORS.reset} v${version}
-Context Engineering Optimizer for Claude Code, Cursor, and Windsurf
+${COLORS.bright}${COLORS.cyan}Distill MCP Server${COLORS.reset} v${version}
+Extract the essence. Compress the context. Save tokens.
 
 ${COLORS.bright}Usage:${COLORS.reset}
-  ctxopt-mcp <command> [options]
+  distill-mcp <command> [options]
 
 ${COLORS.bright}Commands:${COLORS.reset}
   serve             Start the MCP server (stdio mode)
-  setup             Configure IDEs to use CtxOpt
+  setup             Configure IDEs to use Distill
   doctor            Check installation and configuration
   analyze           Analyze files for token usage
 
@@ -47,20 +47,20 @@ ${COLORS.bright}Other Options:${COLORS.reset}
   --help, -h        Show this help message
 
 ${COLORS.bright}Examples:${COLORS.reset}
-  ctxopt-mcp setup                    Auto-detect and configure all IDEs
-  ctxopt-mcp setup --claude           Configure Claude Code only
-  ctxopt-mcp setup --claude --hooks   Configure Claude Code + install hooks
-  ctxopt-mcp setup --hooks            Install hooks only (current project)
-  ctxopt-mcp setup --force            Overwrite existing configurations
-  ctxopt-mcp doctor                   Verify installation
-  ctxopt-mcp serve                    Start MCP server (used by IDE)
-  ctxopt-mcp serve --lazy             Start with lazy mode (95% savings)
-  ctxopt-mcp serve --verbose          Start with verbose logging
-  ctxopt-mcp analyze                  Analyze token usage in codebase
-  ctxopt-mcp analyze -t 5000 --json   Custom threshold, JSON output
+  distill-mcp setup                    Auto-detect and configure all IDEs
+  distill-mcp setup --claude           Configure Claude Code only
+  distill-mcp setup --claude --hooks   Configure Claude Code + install hooks
+  distill-mcp setup --hooks            Install hooks only (current project)
+  distill-mcp setup --force            Overwrite existing configurations
+  distill-mcp doctor                   Verify installation
+  distill-mcp serve                    Start MCP server (used by IDE)
+  distill-mcp serve --lazy             Start with lazy mode (95% savings)
+  distill-mcp serve --verbose          Start with verbose logging
+  distill-mcp analyze                  Analyze token usage in codebase
+  distill-mcp analyze -t 5000 --json   Custom threshold, JSON output
 
 ${COLORS.bright}Documentation:${COLORS.reset}
-  https://ctxopt.dev/docs
+  https://distill.dev/docs
 `);
 }
 
@@ -121,7 +121,7 @@ async function main() {
 
     default: {
       console.error(`Unknown command: ${command}`);
-      console.error('Run "ctxopt-mcp --help" for usage information.');
+      console.error('Run "distill-mcp --help" for usage information.');
       process.exit(1);
     }
   }

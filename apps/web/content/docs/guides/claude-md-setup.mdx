@@ -1,11 +1,11 @@
 ---
 title: CLAUDE.md Configuration
-description: Complete CLAUDE.md template for optimal CtxOpt integration
+description: Complete CLAUDE.md template for optimal Distill integration
 ---
 
 # CLAUDE.md Configuration
 
-Add these instructions to your project's `CLAUDE.md` file to enable automatic token optimization with CtxOpt.
+Add these instructions to your project's `CLAUDE.md` file to enable automatic token optimization with Distill.
 
 ## Quick Setup
 
@@ -16,14 +16,14 @@ Create a `CLAUDE.md` file at your project root and paste the template below.
 ```markdown
 ## MCP Tool Usage Guidelines
 
-Use CtxOpt MCP tools for token-efficient operations:
+Use Distill MCP tools for token-efficient operations:
 
 ### Rule 1: Smart File Reading
 
 When reading source code files for **exploration or understanding**:
 
 \`\`\`
-mcp__ctxopt__smart_file_read filePath="path/to/file.ts"
+mcp__distill__smart_file_read filePath="path/to/file.ts"
 \`\`\`
 
 **When to use native Read instead:**
@@ -35,13 +35,13 @@ mcp__ctxopt__smart_file_read filePath="path/to/file.ts"
 After Bash commands that produce large output (>500 chars):
 
 \`\`\`
-mcp__ctxopt__auto_optimize content="<paste the large output>"
+mcp__distill__auto_optimize content="<paste the large output>"
 \`\`\`
 
 ### Rule 3: Register Model at Session Start
 
 \`\`\`
-mcp__ctxopt__register_model model="claude-opus-4-5-20251101"
+mcp__distill__register_model model="claude-opus-4-5-20251101"
 \`\`\`
 
 ### Rule 4: Code Execution SDK for Complex Operations
@@ -49,7 +49,7 @@ mcp__ctxopt__register_model model="claude-opus-4-5-20251101"
 For multi-step operations, use `code_execute` instead of multiple tool calls (**98% token savings**):
 
 \`\`\`
-mcp__ctxopt__code_execute code="<typescript code>"
+mcp__distill__code_execute code="<typescript code>"
 \`\`\`
 
 **SDK API (`ctx`):**
@@ -90,11 +90,11 @@ return ctx.code.extract(content, "typescript", { type: "function", name: "handle
 
 | Action | Use |
 |--------|-----|
-| Read code for exploration | `mcp__ctxopt__smart_file_read filePath="file.ts"` |
-| Get function/class | `mcp__ctxopt__smart_file_read filePath="file.ts" target={"type":"function","name":"myFunc"}` |
-| Compress build errors | `mcp__ctxopt__auto_optimize content="..."` |
-| Summarize logs | `mcp__ctxopt__summarize_logs logs="..."` |
-| Multi-step operations | `mcp__ctxopt__code_execute code="return ctx.files.glob('src/**/*.ts')"` |
+| Read code for exploration | `mcp__distill__smart_file_read filePath="file.ts"` |
+| Get function/class | `mcp__distill__smart_file_read filePath="file.ts" target={"type":"function","name":"myFunc"}` |
+| Compress build errors | `mcp__distill__auto_optimize content="..."` |
+| Summarize logs | `mcp__distill__summarize_logs logs="..."` |
+| Multi-step operations | `mcp__distill__code_execute code="return ctx.files.glob('src/**/*.ts')"` |
 | Before editing | Use native `Read` tool |
 ```
 
@@ -105,10 +105,10 @@ If you prefer a shorter version:
 ```markdown
 ## MCP Tools
 
-Use CtxOpt for token optimization:
-- Code exploration: `mcp__ctxopt__smart_file_read filePath="file.ts"`
-- Large outputs: `mcp__ctxopt__auto_optimize content="..."`
-- Multi-step ops: `mcp__ctxopt__code_execute code="return ctx.files.glob('**/*.ts')"`
+Use Distill for token optimization:
+- Code exploration: `mcp__distill__smart_file_read filePath="file.ts"`
+- Large outputs: `mcp__distill__auto_optimize content="..."`
+- Multi-step ops: `mcp__distill__code_execute code="return ctx.files.glob('**/*.ts')"`
 - Before editing: Use native `Read` tool
 ```
 
@@ -126,7 +126,7 @@ Use CtxOpt for token optimization:
 Instead of manually creating the file, you can use the CLI:
 
 ```bash
-ctxopt-mcp setup --hooks
+distill-mcp setup --hooks
 ```
 
 This will:
@@ -149,7 +149,7 @@ Windsurf uses a similar mechanism. Add the template to your project root.
 
 ## Verifying Setup
 
-After adding the `CLAUDE.md`, verify CtxOpt is working:
+After adding the `CLAUDE.md`, verify Distill is working:
 
 1. Start a new conversation
 2. Ask Claude to read a source file

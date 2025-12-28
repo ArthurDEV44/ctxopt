@@ -1,11 +1,11 @@
 ---
 title: Project Settings Configuration
-description: Configure .claude/settings.local.json for project-level CtxOpt integration
+description: Configure .claude/settings.local.json for project-level Distill integration
 ---
 
 # Project Settings Configuration
 
-Configure CtxOpt at the project level using `.claude/settings.local.json`. This file overrides global settings for a specific project.
+Configure Distill at the project level using `.claude/settings.local.json`. This file overrides global settings for a specific project.
 
 ## File Location
 
@@ -25,20 +25,20 @@ your-project/
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"],
+      "args": ["distill-mcp"],
       "env": {}
     }
   },
   "permissions": {
     "allow": [
-      "mcp__ctxopt__smart_file_read",
-      "mcp__ctxopt__auto_optimize",
-      "mcp__ctxopt__code_execute",
-      "mcp__ctxopt__discover_tools",
-      "mcp__ctxopt__session_stats",
-      "mcp__ctxopt__register_model"
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools",
+      "mcp__distill__session_stats",
+      "mcp__distill__register_model"
     ]
   }
 }
@@ -48,14 +48,14 @@ your-project/
 
 ### MCP Servers
 
-Configure the CtxOpt MCP server:
+Configure the Distill MCP server:
 
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"],
+      "args": ["distill-mcp"],
       "env": {}
     }
   }
@@ -67,8 +67,8 @@ Configure the CtxOpt MCP server:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
-      "command": "ctxopt-mcp",
+    "distill": {
+      "command": "distill-mcp",
       "args": ["serve"],
       "env": {}
     }
@@ -78,26 +78,26 @@ Configure the CtxOpt MCP server:
 
 ### Tool Permissions
 
-Pre-approve CtxOpt tools to avoid permission prompts:
+Pre-approve Distill tools to avoid permission prompts:
 
 ```json
 {
   "permissions": {
     "allow": [
-      "mcp__ctxopt__smart_file_read",
-      "mcp__ctxopt__auto_optimize",
-      "mcp__ctxopt__code_execute",
-      "mcp__ctxopt__discover_tools",
-      "mcp__ctxopt__session_stats",
-      "mcp__ctxopt__register_model",
-      "mcp__ctxopt__summarize_logs",
-      "mcp__ctxopt__compress_context",
-      "mcp__ctxopt__analyze_build_output",
-      "mcp__ctxopt__deduplicate_errors",
-      "mcp__ctxopt__semantic_compress",
-      "mcp__ctxopt__code_skeleton",
-      "mcp__ctxopt__diff_compress",
-      "mcp__ctxopt__context_budget"
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools",
+      "mcp__distill__session_stats",
+      "mcp__distill__register_model",
+      "mcp__distill__summarize_logs",
+      "mcp__distill__compress_context",
+      "mcp__distill__analyze_build_output",
+      "mcp__distill__deduplicate_errors",
+      "mcp__distill__semantic_compress",
+      "mcp__distill__code_skeleton",
+      "mcp__distill__diff_compress",
+      "mcp__distill__context_budget"
     ]
   }
 }
@@ -109,10 +109,10 @@ Pre-approve CtxOpt tools to avoid permission prompts:
 {
   "permissions": {
     "allow": [
-      "mcp__ctxopt__smart_file_read",
-      "mcp__ctxopt__auto_optimize",
-      "mcp__ctxopt__code_execute",
-      "mcp__ctxopt__discover_tools"
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools"
     ]
   }
 }
@@ -125,20 +125,20 @@ For quick setup, use this minimal configuration:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"]
+      "args": ["distill-mcp"]
     }
   },
   "permissions": {
     "allow": [
-      "mcp__ctxopt__*"
+      "mcp__distill__*"
     ]
   }
 }
 ```
 
-The wildcard `mcp__ctxopt__*` allows all CtxOpt tools without individual prompts.
+The wildcard `mcp__distill__*` allows all Distill tools without individual prompts.
 
 ## Global vs Project Settings
 
@@ -158,7 +158,7 @@ Generate the configuration automatically:
 
 ```bash
 # In your project directory
-ctxopt-mcp setup --local
+distill-mcp setup --local
 ```
 
 This creates `.claude/settings.local.json` with the recommended configuration.
@@ -186,7 +186,7 @@ Share settings with your team by committing the file:
 
 ```bash
 git add .claude/settings.local.json
-git commit -m "chore: add CtxOpt MCP configuration"
+git commit -m "chore: add Distill MCP configuration"
 ```
 
 ### Keep Private
@@ -204,9 +204,9 @@ Pass environment variables to the MCP server:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"],
+      "args": ["distill-mcp"],
       "env": {
         "CTXOPT_DEBUG": "true",
         "CTXOPT_LOG_LEVEL": "info"
@@ -231,16 +231,16 @@ Pass environment variables to the MCP server:
 
 1. Run doctor to check installation:
    ```bash
-   ctxopt-mcp doctor
+   distill-mcp doctor
    ```
 2. Try running the server manually:
    ```bash
-   npx @ctxopt/mcp-server serve
+   npx distill-mcp serve
    ```
 
 ### Permission Denied Errors
 
-Add the specific tool to the `permissions.allow` array or use the wildcard pattern `mcp__ctxopt__*`.
+Add the specific tool to the `permissions.allow` array or use the wildcard pattern `mcp__distill__*`.
 
 ## Complete Example
 
@@ -249,26 +249,26 @@ Full configuration with all options:
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "npx",
-      "args": ["@ctxopt/mcp-server"],
+      "args": ["distill-mcp"],
       "env": {}
     }
   },
   "permissions": {
     "allow": [
-      "mcp__ctxopt__smart_file_read",
-      "mcp__ctxopt__auto_optimize",
-      "mcp__ctxopt__code_execute",
-      "mcp__ctxopt__discover_tools",
-      "mcp__ctxopt__session_stats",
-      "mcp__ctxopt__register_model"
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools",
+      "mcp__distill__session_stats",
+      "mcp__distill__register_model"
     ]
   }
 }
 ```
 
 This configuration:
-- Enables the CtxOpt MCP server
+- Enables the Distill MCP server
 - Pre-approves core tools for seamless usage
 - Works with both global and local installations

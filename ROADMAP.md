@@ -214,7 +214,7 @@ session_stats()
 | VS Code + Continue | MCP adapter |
 
 - [x] One-click setup scripts per IDE (`scripts/install.sh`, `install.ps1`)
-- [x] IDE-specific configuration templates (`ctxopt-mcp setup`)
+- [x] IDE-specific configuration templates (`distill-mcp setup`)
 - [x] Integration documentation (`docs/guides/`)
 
 ### 5.2 CI/CD Integration
@@ -223,7 +223,7 @@ session_stats()
 
 ```yaml
 # GitHub Actions example
-- uses: ctxopt/analyze-action@v1
+- uses: ArthurDEV44/distill-action@v1
   with:
     patterns: 'src/**/*.{ts,js}'
     threshold: 2000
@@ -232,7 +232,7 @@ session_stats()
 
 - [x] GitHub Action for token usage analysis (`action/action.yml`)
 - [x] Pre-commit hook for large file warnings (`scripts/pre-commit-hook.sh`)
-- [x] CLI analyze command (`ctxopt-mcp analyze`)
+- [x] CLI analyze command (`distill-mcp analyze`)
 - [ ] PR comment with optimization suggestions (future enhancement)
 
 ---

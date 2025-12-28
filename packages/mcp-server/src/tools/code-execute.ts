@@ -1,7 +1,7 @@
 /**
  * Code Execute Tool
  *
- * Executes TypeScript code with ctxopt SDK in a sandboxed environment.
+ * Executes TypeScript code with Distill SDK in a sandboxed environment.
  * Reduces MCP token overhead by ~98% compared to individual tool calls.
  */
 
@@ -84,7 +84,7 @@ async function executeCodeExecute(
 /**
  * Tool description with SDK reference
  */
-const DESCRIPTION = `Execute TypeScript with ctxopt SDK. 98% fewer tokens than tool calls.
+const DESCRIPTION = `Execute TypeScript with Distill SDK. 98% fewer tokens than tool calls.
 
 SDK (ctx):
   compress: auto(content,hint?) logs(logs) diff(diff) semantic(content,ratio?)

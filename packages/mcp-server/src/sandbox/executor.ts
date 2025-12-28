@@ -1,7 +1,7 @@
 /**
  * Sandbox Executor
  *
- * Executes user code in a sandboxed environment with ctxopt SDK.
+ * Executes user code in a sandboxed environment with Distill SDK.
  * Uses Function constructor with restricted scope for isolation.
  */
 

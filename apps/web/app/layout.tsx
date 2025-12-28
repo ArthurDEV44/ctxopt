@@ -4,8 +4,8 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: {
-    default: "CtxOpt - Context Engineering for LLMs",
-    template: "%s | CtxOpt",
+    default: "Distill - Context Engineering for LLMs",
+    template: "%s | Distill",
   },
   description:
     "Open source MCP server for LLM token optimization. Reduce costs by up to 60% with intelligent context compression.",
@@ -19,19 +19,19 @@ export const metadata: Metadata = {
     "Anthropic",
     "open source",
   ],
-  authors: [{ name: "CtxOpt" }],
+  authors: [{ name: "Distill" }],
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://ctxopt.dev",
-    siteName: "CtxOpt",
-    title: "CtxOpt - Context Engineering for LLMs",
+    url: "https://distill.dev",
+    siteName: "Distill",
+    title: "Distill - Context Engineering for LLMs",
     description:
       "Open source MCP server for LLM token optimization.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "CtxOpt - Context Engineering for LLMs",
+    title: "Distill - Context Engineering for LLMs",
     description:
       "Open source MCP server for LLM token optimization.",
   },

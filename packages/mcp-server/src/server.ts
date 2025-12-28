@@ -75,7 +75,7 @@ export async function createServer(config: ServerConfig = {}): Promise<ServerIns
 
     if (config.verbose) {
       const savings = calculateLazySavings();
-      console.error(`[ctxopt] Lazy mode: ${savings.savingsPercent}% token savings`);
+      console.error(`[distill] Lazy mode: ${savings.savingsPercent}% token savings`);
     }
   } else if (mode === "all") {
     // All mode: Load all tools at startup
@@ -106,7 +106,7 @@ export async function createServer(config: ServerConfig = {}): Promise<ServerIns
   // Create MCP server
   const server = new Server(
     {
-      name: "@ctxopt/mcp-server",
+      name: "distill-mcp",
       version: "0.1.0",
     },
     {
@@ -167,12 +167,12 @@ export async function runServer(config: ServerConfig = {}): Promise<void> {
   // Handle server close event
   server.onclose = async () => {
     if (config.verbose) {
-      console.error("[ctxopt] Server connection closed");
+      console.error("[distill] Server connection closed");
     }
     process.exit(0);
   };
 
   await server.connect(transport);
 
-  console.error("CtxOpt MCP Server running on stdio");
+  console.error("Distill MCP Server running on stdio");
 }

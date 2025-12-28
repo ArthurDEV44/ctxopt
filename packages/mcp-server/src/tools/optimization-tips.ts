@@ -139,8 +139,8 @@ export async function optimizationTips(
   const result = `${tips}
 
 ---
-*Tips from CtxOpt - Context Engineering Optimizer*
-*Learn more at https://ctxopt.dev*`;
+*Tips from Distill - LLM Token Optimization*
+*Learn more at https://distill.dev*`;
 
   return {
     content: [{ type: "text", text: result }],

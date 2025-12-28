@@ -47,7 +47,7 @@ export const TOOL_CATALOG: ToolMetadata[] = [
     name: "code_execute",
     category: "core",
     keywords: ["execute", "code", "sdk", "typescript", "script", "sandbox"],
-    description: "Execute TypeScript with ctxopt SDK (98% token savings)",
+    description: "Execute TypeScript with Distill SDK (98% token savings)",
     loader: async () => (await import("./code-execute.js")).codeExecuteTool,
   },
 

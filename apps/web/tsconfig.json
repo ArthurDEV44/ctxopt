@@ -9,8 +9,8 @@
     "baseUrl": ".",
     "paths": {
       "@/*": ["./*"],
-      "@ctxopt/shared": ["../../packages/shared/src"],
-      "@ctxopt/shared/*": ["../../packages/shared/src/*"]
+      "@distill/shared": ["../../packages/shared/src"],
+      "@distill/shared/*": ["../../packages/shared/src/*"]
     }
   },
   "include": [

@@ -4,7 +4,7 @@ const withMDX = createMDX();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  transpilePackages: ["@ctxopt/shared"],
+  transpilePackages: ["@distill/shared"],
   experimental: {
     serverActions: {
       bodySizeLimit: "10mb",

@@ -114,16 +114,16 @@ export function writeJSONFile(path: string, data: Record<string, unknown>): bool
 
 export function getMCPServerConfig(): Record<string, unknown> {
   return {
-    command: "ctxopt-mcp",
+    command: "distill-mcp",
     args: ["serve"],
     env: {},
   };
 }
 
-export function isCtxOptConfigured(config: Record<string, unknown> | null): boolean {
+export function isDistillConfigured(config: Record<string, unknown> | null): boolean {
   if (!config) return false;
   const mcpServers = config.mcpServers as Record<string, unknown> | undefined;
-  return mcpServers?.ctxopt !== undefined;
+  return mcpServers?.distill !== undefined;
 }
 
 export function getPackageVersion(): string {

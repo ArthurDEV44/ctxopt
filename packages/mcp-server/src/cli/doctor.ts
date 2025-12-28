@@ -4,7 +4,7 @@ import {
   type IDE,
   detectInstalledIDEs,
   readJSONFile,
-  isCtxOptConfigured,
+  isDistillConfigured,
   success,
   warn,
   error,
@@ -49,20 +49,20 @@ function checkNodeVersion(): CheckResult {
 
 function checkPackageInstallation(): CheckResult {
   try {
-    // Check if ctxopt-mcp is in PATH
+    // Check if distill-mcp is in PATH
     const which = process.platform === "win32" ? "where" : "which";
-    execSync(`${which} ctxopt-mcp`, { stdio: "pipe" });
+    execSync(`${which} distill-mcp`, { stdio: "pipe" });
 
     return {
       name: "Package installation",
       status: "pass",
-      message: `@ctxopt/mcp-server v${getPackageVersion()} installed globally`,
+      message: `distill-mcp v${getPackageVersion()} installed globally`,
     };
   } catch {
     return {
       name: "Package installation",
       status: "warn",
-      message: "ctxopt-mcp not found in PATH (may be running via npx)",
+      message: "distill-mcp not found in PATH (may be running via npx)",
     };
   }
 }
@@ -92,17 +92,17 @@ function checkIDEConfigurations(): CheckResult[] {
       continue;
     }
 
-    if (isCtxOptConfigured(configFile)) {
+    if (isDistillConfigured(configFile)) {
       results.push({
         name: `${config.name} configuration`,
         status: "pass",
-        message: `CtxOpt configured in ${config.configPath}`,
+        message: `Distill configured in ${config.configPath}`,
       });
     } else {
       results.push({
         name: `${config.name} configuration`,
         status: "fail",
-        message: `CtxOpt not configured. Run 'ctxopt-mcp setup --${ide}'`,
+        message: `Distill not configured. Run 'distill-mcp setup --${ide}'`,
       });
     }
   }
@@ -111,7 +111,7 @@ function checkIDEConfigurations(): CheckResult[] {
 }
 
 export async function doctor(): Promise<void> {
-  log(`\n${COLORS.bright}${COLORS.cyan}CtxOpt MCP Server Doctor${COLORS.reset}\n`);
+  log(`\n${COLORS.bright}${COLORS.cyan}Distill MCP Server Doctor${COLORS.reset}\n`);
   log(`Running diagnostic checks...\n`);
 
   const checks: CheckResult[] = [
@@ -144,12 +144,12 @@ export async function doctor(): Promise<void> {
   log("\n" + "─".repeat(50));
 
   if (failCount === 0 && warnCount === 0) {
-    success(`All ${passCount} checks passed! CtxOpt is ready to use.`);
+    success(`All ${passCount} checks passed! Distill is ready to use.`);
   } else if (failCount === 0) {
-    warn(`${passCount} passed, ${warnCount} warnings. CtxOpt should work but may have limited functionality.`);
+    warn(`${passCount} passed, ${warnCount} warnings. Distill should work but may have limited functionality.`);
   } else {
     error(`${passCount} passed, ${warnCount} warnings, ${failCount} failed.`);
-    log(`\nRun ${COLORS.cyan}ctxopt-mcp setup${COLORS.reset} to fix configuration issues.`);
+    log(`\nRun ${COLORS.cyan}distill-mcp setup${COLORS.reset} to fix configuration issues.`);
   }
 
   log("");

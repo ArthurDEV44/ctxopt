@@ -1,7 +1,7 @@
 /**
- * @ctxopt/mcp-server
+ * distill-mcp
  *
- * MCP Server for CtxOpt - Context Engineering Optimizer
+ * MCP Server for Distill - LLM Token Optimization
  *
  * Provides tools for analyzing and optimizing LLM context usage.
  */

@@ -44,7 +44,7 @@ async function executeBrowseTools(args: unknown): Promise<ToolExecuteResult> {
       }
     }
 
-    const lines = ["ctxopt/", ""];
+    const lines = ["distill/", ""];
     for (const [cat, count] of categories) {
       lines.push(`  ${cat}/ (${count} tools)`);
     }
@@ -63,7 +63,7 @@ async function executeBrowseTools(args: unknown): Promise<ToolExecuteResult> {
     };
   }
 
-  const lines = [`ctxopt/${category}/`, ""];
+  const lines = [`distill/${category}/`, ""];
   for (const tool of tools) {
     lines.push(`  ${tool.name}: ${tool.description}`);
   }

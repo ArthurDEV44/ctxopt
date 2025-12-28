@@ -10,7 +10,7 @@ export default function Layout({ children }: { children: ReactNode }) {
       <DocsLayout
         tree={source.pageTree}
         nav={{
-          title: "CtxOpt",
+          title: "Distill",
           url: "/",
         }}
         sidebar={{
@@ -19,7 +19,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         links={[
           {
             text: "GitHub",
-            url: "https://github.com/ctxopt/ctxopt",
+            url: "https://github.com/ArthurDEV44/ctxopt",
             external: true,
           },
         ]}

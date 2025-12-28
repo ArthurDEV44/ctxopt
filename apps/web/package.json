@@ -1,5 +1,5 @@
 {
-  "name": "@ctxopt/web",
+  "name": "@distill/web",
   "version": "0.1.0",
   "type": "module",
   "private": true,
@@ -11,7 +11,7 @@
     "check-types": "tsc --noEmit"
   },
   "dependencies": {
-    "@ctxopt/shared": "workspace:*",
+    "@distill/shared": "workspace:*",
     "@react-three/drei": "^10.7.7",
     "@react-three/fiber": "^9.4.2",
     "@types/mdx": "^2.0.13",

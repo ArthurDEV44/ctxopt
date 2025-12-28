@@ -56,7 +56,7 @@ export class MiddlewareChain {
       timestamp: Date.now(),
     });
     // Also log for debugging
-    console.error(`[ctxopt] Middleware ${middlewareName} ${phase} error:`, err.message);
+    console.error(`[distill] Middleware ${middlewareName} ${phase} error:`, err.message);
   }
 
   /**

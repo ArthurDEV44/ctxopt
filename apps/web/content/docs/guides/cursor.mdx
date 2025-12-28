@@ -1,21 +1,21 @@
 ---
 title: Cursor Integration
-description: Step-by-step guide to integrate CtxOpt with Cursor
+description: Step-by-step guide to integrate Distill with Cursor
 ---
 
 # Cursor Integration
 
-This guide walks you through setting up CtxOpt with Cursor IDE.
+This guide walks you through setting up Distill with Cursor IDE.
 
 ## Prerequisites
 
 - Cursor installed ([download](https://cursor.sh))
 - Node.js 18+ installed
 
-## Step 1: Install CtxOpt
+## Step 1: Install Distill
 
 ```bash
-npm install -g @ctxopt/mcp-server
+npm install -g distill-mcp
 ```
 
 ## Step 2: Configure MCP in Cursor
@@ -26,9 +26,9 @@ npm install -g @ctxopt/mcp-server
 
 ```json
 {
-  "ctxopt": {
+  "distill": {
     "command": "npx",
-    "args": ["@ctxopt/mcp-server"]
+    "args": ["distill-mcp"]
   }
 }
 ```
@@ -50,9 +50,9 @@ In Cursor's AI chat, ask:
 What MCP tools are available?
 ```
 
-You should see the CtxOpt tools listed.
+You should see the Distill tools listed.
 
-## Using CtxOpt with Cursor
+## Using Distill with Cursor
 
 ### Code Navigation
 
@@ -88,7 +88,7 @@ Compress this git diff: [paste diff]
 
 ### MCP Server Not Found
 
-1. Verify installation: `npx @ctxopt/mcp-server --version`
+1. Verify installation: `npx distill-mcp --version`
 2. Check Cursor's MCP logs in the Output panel
 3. Try running the server manually to check for errors
 

@@ -1,5 +1,5 @@
 /**
- * CtxOpt Hooks Installation Module
+ * Distill Hooks Installation Module
  *
  * Installs Claude Code hooks that suggest MCP tool usage:
  * - PreToolUse: Suggests smart_file_read for code files (non-blocking for Edit compatibility)
@@ -16,7 +16,7 @@ import { success, warn, info, error, log, COLORS, readJSONFile, writeJSONFile } 
 // ============================================================================
 
 const PRE_READ_CHECK_SCRIPT = `#!/bin/bash
-# CtxOpt - PreToolUse Hook for Read
+# Distill - PreToolUse Hook for Read
 # Suggests smart_file_read for code files (non-blocking to allow Edit to work)
 
 INPUT=$(cat)
@@ -38,7 +38,7 @@ fi
 if echo "$FILE_PATH" | grep -qE "\\.(ts|tsx|js|jsx|py|go|rs|java|cpp|c|h|hpp)$"; then
   # Use systemMessage to suggest without blocking (allows Edit to work)
   cat << EOF
-{"systemMessage": "TIP: Consider using mcp__ctxopt__smart_file_read for '\$BASENAME' to save 50-70% tokens. Example: mcp__ctxopt__smart_file_read filePath=\\"\$FILE_PATH\\" target={\\"type\\":\\"function\\",\\"name\\":\\"myFunc\\"}"}
+{"systemMessage": "TIP: Consider using mcp__distill__smart_file_read for '\$BASENAME' to save 50-70% tokens. Example: mcp__distill__smart_file_read filePath=\\"\$FILE_PATH\\" target={\\"type\\":\\"function\\",\\"name\\":\\"myFunc\\"}"}
 EOF
   exit 0
 fi
@@ -48,7 +48,7 @@ exit 0
 `;
 
 const POST_BASH_REMIND_SCRIPT = `#!/bin/bash
-# CtxOpt - PostToolUse Hook for Bash
+# Distill - PostToolUse Hook for Bash
 # Reminds to use MCP tools for large outputs
 
 INPUT=$(cat)
@@ -65,30 +65,30 @@ fi
 
 # Detect content type and suggest appropriate tool
 if echo "$TOOL_RESPONSE" | grep -qiE "(error TS|warning TS|error\\[E|npm ERR|ERROR in|failed|FAILED)"; then
-  echo '{"systemMessage": "TIP: Large build output detected. Use mcp__ctxopt__auto_optimize to compress errors (95%+ reduction)."}'
+  echo '{"systemMessage": "TIP: Large build output detected. Use mcp__distill__auto_optimize to compress errors (95%+ reduction)."}'
   exit 0
 fi
 
 if echo "$TOOL_RESPONSE" | grep -qiE "(\\[INFO\\]|\\[ERROR\\]|\\[WARN\\]|\\[DEBUG\\]|[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2})"; then
-  echo '{"systemMessage": "TIP: Large log output detected. Use mcp__ctxopt__summarize_logs to compress (80-90% reduction)."}'
+  echo '{"systemMessage": "TIP: Large log output detected. Use mcp__distill__summarize_logs to compress (80-90% reduction)."}'
   exit 0
 fi
 
 # Generic large output
-echo '{"systemMessage": "TIP: Large output ('$RESPONSE_SIZE' chars). Consider using mcp__ctxopt__auto_optimize for compression (40-60% reduction)."}'
+echo '{"systemMessage": "TIP: Large output ('$RESPONSE_SIZE' chars). Consider using mcp__distill__auto_optimize for compression (40-60% reduction)."}'
 exit 0
 `;
 
 const PROMPT_INJECT_SCRIPT = `#!/bin/bash
-# CtxOpt - UserPromptSubmit Hook
+# Distill - UserPromptSubmit Hook
 # Injects MCP tool reminders at the start of each prompt
 
 cat << 'EOF'
 <user-prompt-submit-hook>
-CTXOPT REMINDER: Use MCP tools for token optimization:
-- Code files: mcp__ctxopt__smart_file_read (50-70% savings vs Read)
-- Build/test output: mcp__ctxopt__auto_optimize
-- Session stats: mcp__ctxopt__session_stats
+DISTILL REMINDER: Use MCP tools for token optimization:
+- Code files: mcp__distill__smart_file_read (50-70% savings vs Read)
+- Build/test output: mcp__distill__auto_optimize
+- Session stats: mcp__distill__session_stats
 </user-prompt-submit-hook>
 EOF
 exit 0
@@ -173,7 +173,7 @@ export async function installHooks(options: InstallHooksOptions = {}): Promise<b
   const projectDir = options.projectDir || process.cwd();
   const force = options.force || false;
 
-  log(`\n${COLORS.bright}Installing CtxOpt hooks...${COLORS.reset}\n`);
+  log(`\n${COLORS.bright}Installing Distill hooks...${COLORS.reset}\n`);
 
   // Check for jq dependency
   info("Checking dependencies...");

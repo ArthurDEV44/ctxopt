@@ -18,7 +18,7 @@ function getEncoder(): Tiktoken | null {
     try {
       encoder = encodingForModel("gpt-4");
     } catch (error) {
-      console.error("[ctxopt] Failed to initialize tiktoken encoder:", error);
+      console.error("[distill] Failed to initialize tiktoken encoder:", error);
       return null;
     }
   }

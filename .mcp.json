@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "ctxopt": {
+    "distill": {
       "command": "bun",
       "args": [
         "/home/sauron/code/ctxopt/packages/mcp-server/bin/cli.js",

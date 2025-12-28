@@ -72,20 +72,20 @@ claude mcp add distill -- npx distill-mcp
 
 ```bash
 # Get file structure overview
-mcp__ctxopt__smart_file_read filePath="src/server.ts"
+mcp__distill__smart_file_read filePath="src/server.ts"
 
 # Extract specific function
-mcp__ctxopt__smart_file_read filePath="src/server.ts" target={"type":"function","name":"createServer"}
+mcp__distill__smart_file_read filePath="src/server.ts" target={"type":"function","name":"createServer"}
 
 # Get skeleton (signatures only)
-mcp__ctxopt__smart_file_read filePath="src/server.ts" skeleton=true
+mcp__distill__smart_file_read filePath="src/server.ts" skeleton=true
 ```
 
 ### Compress Build Output
 
 ```bash
 # After a failed build, compress the output
-mcp__ctxopt__auto_optimize content="<paste npm/tsc/webpack output>"
+mcp__distill__auto_optimize content="<paste npm/tsc/webpack output>"
 ```
 
 ### Code Execution SDK
@@ -93,7 +93,7 @@ mcp__ctxopt__auto_optimize content="<paste npm/tsc/webpack output>"
 The `code_execute` tool provides **98% token savings** by letting LLMs write TypeScript:
 
 ```bash
-mcp__ctxopt__code_execute code="return ctx.compress.auto(ctx.files.read('logs.txt'))"
+mcp__distill__code_execute code="return ctx.compress.auto(ctx.files.read('logs.txt'))"
 ```
 
 **SDK API:**
@@ -133,13 +133,13 @@ ctx.analyze.callGraph(fn)
 
 ```bash
 # Browse available tools (metadata only)
-mcp__ctxopt__discover_tools category="compress"
+mcp__distill__discover_tools category="compress"
 
 # Load tools when needed
-mcp__ctxopt__discover_tools category="compress" load=true
+mcp__distill__discover_tools category="compress" load=true
 
 # TOON format for compact output
-mcp__ctxopt__discover_tools format="toon"
+mcp__distill__discover_tools format="toon"
 ```
 
 ## CLI Commands
