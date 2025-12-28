@@ -45,32 +45,11 @@ function formatResult(
     technique: string;
   },
   contentType: ContentType,
-  omittedInfo?: string
+  _omittedInfo?: string
 ): string {
-  const parts: string[] = [];
-
-  // Compressed content
-  parts.push("## Compressed Content");
-  parts.push("");
-  parts.push("```");
-  parts.push(compressed);
-  parts.push("```");
-  parts.push("");
-
-  // Statistics
-  parts.push("---");
-  parts.push("### Compression Statistics");
-  parts.push(`- **Content type:** ${getContentTypeDescription(contentType)}`);
-  parts.push(`- **Technique:** ${stats.technique}`);
-  parts.push(`- **Original:** ${stats.originalLines} lines, ${stats.originalTokens.toLocaleString()} tokens`);
-  parts.push(`- **Compressed:** ${stats.compressedLines} lines, ${stats.compressedTokens.toLocaleString()} tokens`);
-  parts.push(`- **Reduction:** ${stats.reductionPercent}%`);
-
-  if (omittedInfo) {
-    parts.push(`- **Note:** ${omittedInfo}`);
-  }
-
-  return parts.join("\n");
+  // Minimal header to save tokens
+  const header = `[${contentType}] ${stats.originalTokens}→${stats.compressedTokens} tokens (-${stats.reductionPercent}%)`;
+  return `${header}\n${compressed}`;
 }
 
 export async function executeCompressContext(

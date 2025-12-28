@@ -257,47 +257,11 @@ function executePipeline(
 }
 
 /**
- * Format pipeline result for output
+ * Format pipeline result - minimal header to save tokens
  */
 function formatOutput(result: PipelineResult): string {
-  const parts: string[] = [];
-
-  parts.push("## Smart Pipeline Result\n");
-  parts.push("```");
-  parts.push(result.finalContent);
-  parts.push("```\n");
-
-  parts.push("---");
-  parts.push("### Pipeline Execution\n");
-  parts.push(`- **Detected type:** ${result.detectedType}`);
-  parts.push(`- **Steps executed:** ${result.steps.length}`);
-  parts.push("");
-
-  // Step details
-  if (result.steps.length > 0) {
-    parts.push("| Step | Input Tokens | Output Tokens | Savings |");
-    parts.push("|------|--------------|---------------|---------|");
-    for (const step of result.steps) {
-      parts.push(
-        `| ${step.step} | ${step.inputTokens.toLocaleString()} | ${step.outputTokens.toLocaleString()} | ${step.savingsPercent}% |`
-      );
-    }
-    parts.push("");
-  }
-
-  // Total stats
-  parts.push("### Total Statistics\n");
-  parts.push(
-    `- **Original tokens:** ${result.totalOriginalTokens.toLocaleString()}`
-  );
-  parts.push(
-    `- **Final tokens:** ${result.totalCompressedTokens.toLocaleString()}`
-  );
-  parts.push(
-    `- **Total savings:** ${(result.totalOriginalTokens - result.totalCompressedTokens).toLocaleString()} tokens (${result.totalSavingsPercent}%)`
-  );
-
-  return parts.join("\n");
+  const header = `[pipeline:${result.detectedType}] ${result.totalOriginalTokens}→${result.totalCompressedTokens} tokens (-${result.totalSavingsPercent}%)`;
+  return `${header}\n${result.finalContent}`;
 }
 
 /**

@@ -51,46 +51,15 @@ interface SemanticCompressOutput {
 }
 
 /**
- * Format the compression result as markdown for display
+ * Format the compression result - minimal header to save tokens
  */
-function formatOutput(result: SemanticCompressOutput, technique: string): string {
-  const parts: string[] = [];
-
-  parts.push("## Semantically Compressed Content\n");
-  parts.push("```");
-  parts.push(result.compressed);
-  parts.push("```\n");
-
-  parts.push("---");
-  parts.push("### Compression Statistics\n");
-  parts.push(
-    `- **Original tokens:** ${result.originalTokens.toLocaleString()}`
-  );
-  parts.push(
-    `- **Compressed tokens:** ${result.compressedTokens.toLocaleString()}`
-  );
-
+function formatOutput(result: SemanticCompressOutput, _technique: string): string {
   const savingsPercent =
     result.originalTokens > 0
       ? Math.round((result.savings / result.originalTokens) * 100)
       : 0;
-  parts.push(
-    `- **Tokens saved:** ${result.savings.toLocaleString()} (${savingsPercent}%)`
-  );
-  parts.push(`- **Technique:** ${technique}`);
-
-  if (result.preservedSegments.length > 0) {
-    parts.push("\n### Preserved Segments\n");
-    const displaySegments = result.preservedSegments.slice(0, 5);
-    for (const segment of displaySegments) {
-      parts.push(`- \`${segment}\``);
-    }
-    if (result.preservedSegments.length > 5) {
-      parts.push(`- ... and ${result.preservedSegments.length - 5} more`);
-    }
-  }
-
-  return parts.join("\n");
+  const header = `[semantic] ${result.originalTokens}→${result.compressedTokens} tokens (-${savingsPercent}%)`;
+  return `${header}\n${result.compressed}`;
 }
 
 /**

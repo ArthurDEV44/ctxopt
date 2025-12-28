@@ -75,39 +75,16 @@ export async function executeConversationCompress(
     preserveLastN: input.preserveLastN,
   });
 
-  // Format output
-  const output: string[] = [
-    `## Conversation Compressed`,
-    "",
-    `**Strategy:** ${input.strategy}`,
-    `**Messages:** ${result.compressedMessages.length} (was ${input.messages.length})`,
-    `**Tokens:** ${result.compressedTokens} (was ${result.originalTokens}) | **Savings:** ${result.savings}%`,
-    "",
-  ];
+  // Minimal header
+  const header = `[conversation] ${result.originalTokens}→${result.compressedTokens} tokens (-${result.savings}%), ${input.messages.length}→${result.compressedMessages.length} msgs`;
 
-  // Add summary if available
-  if (result.summary) {
-    output.push("### Summary");
-    output.push(result.summary);
-    output.push("");
-  }
+  // Compact output
+  const parts: string[] = [header];
+  if (result.summary) parts.push(result.summary);
+  if (result.keyPoints?.length) parts.push(result.keyPoints.map(p => `• ${p}`).join("\n"));
+  parts.push(JSON.stringify(result.compressedMessages));
 
-  // Add key points if available
-  if (result.keyPoints && result.keyPoints.length > 0) {
-    output.push("### Key Points Extracted");
-    for (const point of result.keyPoints) {
-      output.push(`- ${point}`);
-    }
-    output.push("");
-  }
-
-  // Add compressed messages as JSON
-  output.push("### Compressed Messages");
-  output.push("```json");
-  output.push(JSON.stringify(result.compressedMessages, null, 2));
-  output.push("```");
-
-  return { content: [{ type: "text", text: output.join("\n") }] };
+  return { content: [{ type: "text", text: parts.join("\n") }] };
 }
 
 /**

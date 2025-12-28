@@ -38,22 +38,12 @@ export async function executeAnalyzeBuildOutput(
     verbosity,
   });
 
-  // Format the result
-  const parts: string[] = [];
-
-  // Summary
-  parts.push(result.summary);
-  parts.push("");
-
-  // Statistics
-  parts.push("---");
-  parts.push("### Statistics");
-  parts.push(`- **Original tokens:** ${result.stats.tokensOriginal.toLocaleString()}`);
-  parts.push(`- **Compressed tokens:** ${result.stats.tokensCompressed.toLocaleString()}`);
-  parts.push(`- **Reduction:** ${result.stats.reductionPercent}%`);
+  // Format with minimal header
+  const header = `[build] ${result.stats.tokensOriginal}→${result.stats.tokensCompressed} tokens (-${result.stats.reductionPercent}%)`;
+  const formatted = `${header}\n${result.summary}`;
 
   return {
-    content: [{ type: "text", text: parts.join("\n") }],
+    content: [{ type: "text", text: formatted }],
   };
 }
 

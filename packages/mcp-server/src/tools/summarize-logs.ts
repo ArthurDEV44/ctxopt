@@ -74,31 +74,15 @@ export async function executeSummarizeLogs(
   const output = formatSummary(summary, options);
 
   // Calculate token savings
-  const originalLines = input.logs.split("\n").length;
-  const outputLines = output.split("\n").length;
   const originalTokens = Math.ceil(input.logs.length / 4);
   const outputTokens = Math.ceil(output.length / 4);
-  const tokensSaved = Math.max(0, originalTokens - outputTokens);
+  const reductionPercent = originalTokens > 0 ? Math.round((1 - outputTokens / originalTokens) * 100) : 0;
 
-  // Add metrics section
-  const parts: string[] = [output];
-  parts.push("\n---");
-  parts.push("## Metrics\n");
-  parts.push("| Metric | Value |");
-  parts.push("|--------|-------|");
-  parts.push(`| Original lines | ${originalLines.toLocaleString()} |`);
-  parts.push(`| Summary lines | ${outputLines.toLocaleString()} |`);
-  parts.push(
-    `| Reduction | ${Math.round(((originalLines - outputLines) / originalLines) * 100)}% |`
-  );
-  parts.push(`| Tokens saved | ~${tokensSaved.toLocaleString()} |`);
-
-  // Update session state
-  if (tokensSaved > 0) {
-  }
+  // Minimal header
+  const header = `[logs] ${originalTokens}→${outputTokens} tokens (-${reductionPercent}%)`;
 
   return {
-    content: [{ type: "text", text: parts.join("\n") }],
+    content: [{ type: "text", text: `${header}\n${output}` }],
   };
 }
 

@@ -46,58 +46,15 @@ interface DiffCompressOutput {
 }
 
 /**
- * Format the compression result as markdown for display
+ * Format the compression result - minimal header to save tokens
  */
-function formatOutput(output: DiffCompressOutput, strategy: string): string {
-  const parts: string[] = [];
-
-  parts.push(`## Compressed Diff (${strategy})\n`);
-
-  // Use appropriate code fence for the compressed content
-  if (strategy === "summary") {
-    parts.push(output.compressed);
-  } else {
-    parts.push("```diff");
-    parts.push(output.compressed);
-    parts.push("```");
-  }
-  parts.push("");
-
-  parts.push("---");
-  parts.push("### Statistics\n");
-  parts.push(`- **Files changed:** ${output.filesChanged.length}`);
-  parts.push(`- **Additions:** +${output.additions}`);
-  parts.push(`- **Deletions:** -${output.deletions}`);
-  parts.push(`- **Original tokens:** ${output.originalTokens.toLocaleString()}`);
-  parts.push(
-    `- **Compressed tokens:** ${output.compressedTokens.toLocaleString()}`
-  );
-
-  const savings = output.originalTokens - output.compressedTokens;
+function formatOutput(output: DiffCompressOutput, _strategy: string): string {
   const savingsPercent =
     output.originalTokens > 0
-      ? Math.round((savings / output.originalTokens) * 100)
+      ? Math.round(((output.originalTokens - output.compressedTokens) / output.originalTokens) * 100)
       : 0;
-  parts.push(
-    `- **Tokens saved:** ${savings.toLocaleString()} (${savingsPercent}%)`
-  );
-
-  if (output.filesChanged.length <= 10) {
-    parts.push("\n### Files Changed\n");
-    for (const file of output.filesChanged) {
-      parts.push(`- \`${file}\``);
-    }
-  } else {
-    parts.push(
-      `\n### Files Changed (showing 10 of ${output.filesChanged.length})\n`
-    );
-    for (const file of output.filesChanged.slice(0, 10)) {
-      parts.push(`- \`${file}\``);
-    }
-    parts.push(`- ... and ${output.filesChanged.length - 10} more`);
-  }
-
-  return parts.join("\n");
+  const header = `[diff] ${output.filesChanged.length} files, +${output.additions}/-${output.deletions}, ${output.originalTokens}→${output.compressedTokens} tokens (-${savingsPercent}%)`;
+  return `${header}\n${output.compressed}`;
 }
 
 /**

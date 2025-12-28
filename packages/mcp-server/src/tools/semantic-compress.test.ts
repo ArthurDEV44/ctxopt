@@ -24,9 +24,9 @@ This is the conclusion which summarizes the key points.
       const result = await executeSemanticCompress({ content, targetRatio: 0.5 });
 
       expect(result.isError).toBeFalsy();
-      // Should contain beginning and/or end content
+      // Should contain minimal header with stats
       const text = result.content[0]!.text;
-      expect(text).toContain("Compressed");
+      expect(text).toContain("[semantic]");
     });
 
     it("should preserve patterns when specified", async () => {
@@ -172,21 +172,21 @@ console.log(x + y);
       const result = await executeSemanticCompress({ content });
 
       expect(result.isError).toBeFalsy();
-      // Output should show compression occurred
-      expect(result.content[0]!.text).toContain("Compression Statistics");
+      // Output should show compression occurred (minimal header format)
+      expect(result.content[0]!.text).toContain("[semantic]");
+      expect(result.content[0]!.text).toContain("tokens");
     });
   });
 
   describe("output format", () => {
-    it("should include compression statistics", async () => {
+    it("should include compression statistics in minimal header", async () => {
       const content = Array(10).fill("Paragraph of content here.").join("\n\n");
 
       const result = await executeSemanticCompress({ content, targetRatio: 0.5 });
 
       const text = result.content[0]!.text;
-      expect(text).toContain("Original tokens");
-      expect(text).toContain("Compressed tokens");
-      expect(text).toContain("Tokens saved");
+      // Minimal header format: [semantic] X→Y tokens (-Z%)
+      expect(text).toMatch(/\[semantic\] \d+→\d+ tokens \(-\d+%\)/);
     });
 
     it("should show preserved segments when patterns match", async () => {

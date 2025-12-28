@@ -217,22 +217,9 @@ async function autoOptimize(
     }
   }
 
-  // Format output
-  const output = md
-    ? `## Optimized Content
-
-**Detected type:** ${result.detectedType}
-**Method:** ${result.method}
-**Tokens:** ${result.originalTokens} → ${result.optimizedTokens} (${result.savingsPercent}% saved)
-
----
-
-${result.optimizedContent}`
-    : `Optimized Content
-Type: ${result.detectedType} | Method: ${result.method}
-Tokens: ${result.originalTokens} -> ${result.optimizedTokens} (${result.savingsPercent}% saved)
----
-${result.optimizedContent}`;
+  // Format output - minimal header to save tokens
+  const stats = `[${result.detectedType}] ${result.originalTokens}→${result.optimizedTokens} tokens (-${result.savingsPercent}%)`;
+  const output = `${stats}\n${result.optimizedContent}`;
 
   return {
     content: [{ type: "text", text: output }],
