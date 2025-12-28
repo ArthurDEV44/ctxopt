@@ -1,17 +1,19 @@
-# CtxOpt Roadmap
+# Distill Roadmap
 
-Strategic roadmap for CtxOpt - the open source MCP server for LLM token optimization.
+Strategic roadmap for Distill - the open source MCP server for LLM token optimization.
+
+**npm package:** `distill-mcp`
 
 ---
 
 ## Vision
 
-Position CtxOpt as the **comprehensive token optimization layer** for AI coding assistants, complementing Anthropic's Tool Search Tool with content-focused compression.
+Position Distill as the **comprehensive token optimization layer** for AI coding assistants, complementing Anthropic's Tool Search Tool with content-focused compression.
 
 ```
 Tool Search Tool (Anthropic) = "Which tools to load?"
-CtxOpt                       = "How to compress content?"
-CtxOpt + Smart Search        = "Both, optimized"
+Distill                      = "How to compress content?"
+Distill + Smart Search       = "Both, optimized"
 ```
 
 ---

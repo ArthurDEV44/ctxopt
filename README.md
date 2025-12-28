@@ -1,164 +1,74 @@
-# CtxOpt - Context Engineering Optimizer
+# Distill
 
-> Optimize your LLM token usage with intelligent context engineering.
+> Extract the essence. Compress the context. Save tokens.
+
+**Distill** is an open-source MCP server that optimizes LLM token usage through intelligent context compression. Works with Claude Code, Cursor, and Windsurf.
+
+[![npm version](https://img.shields.io/npm/v/distill-mcp.svg)](https://www.npmjs.com/package/distill-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+## Why Distill?
+
+| Problem | Distill Solution | Savings |
+|---------|------------------|---------|
+| Large build outputs | Auto-compress errors | 80-95% |
+| Reading entire files | AST-based extraction | 50-70% |
+| Multiple tool calls | TypeScript SDK execution | **98%** |
+| Verbose logs | Smart summarization | 80-90% |
+
+## Quick Start
+
+```bash
+# Run directly with npx
+npx distill-mcp
+
+# Or install globally
+npm install -g distill-mcp
+
+# Configure your IDE
+distill-mcp setup
+```
+
+### Add to Claude Code
+
+```bash
+claude mcp add distill -- npx distill-mcp
+```
 
 ## Features
 
-- **Real-time Token Analysis** - Count tokens and estimate costs on every request
-- **Smart Suggestions** - AI-powered recommendations to reduce context size
-- **IDE Integration** - Works with Claude Code, Cursor, Windsurf
-- **MCP Server** - Native integration with Model Context Protocol
-- **Dashboard** - Visualize usage, costs, and optimization opportunities
+- **Smart File Reading** - Extract functions, classes, or signatures without loading entire files
+- **Auto Compression** - Detects content type and applies optimal compression
+- **Code Execution SDK** - Write TypeScript instead of chaining tool calls
+- **Lazy Loading** - Only loads tools when needed (85% token overhead reduction)
+- **7 Languages** - TypeScript, JavaScript, Python, Go, Rust, PHP, Swift
 
-## Installation
+## MCP Tools
 
-### Quick Install (Recommended)
+### Core Tools (Always Loaded)
 
-```bash
-# Linux / macOS / WSL
-curl -fsSL https://ctxopt.dev/install.sh | bash
+| Tool | Purpose | Savings |
+|------|---------|---------|
+| `auto_optimize` | Auto-detect and compress content | 40-95% |
+| `smart_file_read` | Read code with AST extraction | 50-70% |
+| `code_execute` | Execute TypeScript with SDK | **98%** |
+| `discover_tools` | Browse/load additional tools | - |
 
-# Windows PowerShell
-irm https://ctxopt.dev/install.ps1 | iex
-```
+### On-Demand Tools
 
-The installer will:
-1. Install `@ctxopt/mcp-server` globally
-2. Auto-detect and configure your IDEs (Claude Code, Cursor, Windsurf)
-3. Verify the installation
+| Tool | Purpose | Savings |
+|------|---------|---------|
+| `semantic_compress` | TF-IDF based compression | 40-60% |
+| `summarize_logs` | Summarize server/test/build logs | 80-90% |
+| `analyze_build_output` | Parse build errors | 95%+ |
+| `deduplicate_errors` | Group repeated errors | 80-95% |
+| `diff_compress` | Compress git diffs | 50-80% |
+| `context_budget` | Pre-flight token estimation | - |
+| `session_stats` | Usage analytics | - |
 
-### Manual Install
+## Usage Examples
 
-```bash
-# npm
-npm install -g @ctxopt/mcp-server
-
-# bun
-bun install -g @ctxopt/mcp-server
-
-# Then configure your IDEs
-ctxopt-mcp setup
-```
-
-## CLI Commands
-
-```bash
-ctxopt-mcp setup          # Auto-configure detected IDEs
-ctxopt-mcp setup --claude # Configure Claude Code only
-ctxopt-mcp setup --cursor # Configure Cursor only
-ctxopt-mcp setup --hooks  # Install project hooks (CLAUDE.md)
-ctxopt-mcp doctor         # Verify installation
-ctxopt-mcp serve          # Start MCP server (used by IDE)
-ctxopt-mcp --help         # Show help
-ctxopt-mcp --version      # Show version
-```
-
-## Usage Guide
-
-### Register Your Model (Recommended)
-
-At the start of each session, register the model for accurate tracking:
-
-```
-mcp__ctxopt__register_model model="claude-opus-4-5-20251101"
-```
-
-Common model IDs:
-- `claude-opus-4-5-20251101` - Opus 4.5
-- `claude-sonnet-4-20250514` - Sonnet 4
-- `claude-3-5-haiku-20241022` - Haiku 3.5
-
-### Available MCP Tools
-
-**Core Tools** (always loaded):
-
-| Tool | Tokens | Purpose | Savings |
-|------|--------|---------|---------|
-| `smart_file_read` | 106 | Read code with AST extraction | 50-70% |
-| `auto_optimize` | 80 | Auto-detect and compress content | 40-95% |
-| `discover_tools` | 78 | Load tools, supports TOON format | 55% (TOON) |
-| `code_execute` | ~150 | Execute TypeScript with SDK | **98%** |
-
-**On-Demand Tools** (loaded via `discover_tools`):
-
-| Tool | Tokens | Purpose | Savings |
-|------|--------|---------|---------|
-| `semantic_compress` | 48 | TF-IDF based compression | 40-60% |
-| `summarize_logs` | 100 | Summarize server/test/build logs | 80-90% |
-| `analyze_build_output` | 87 | Parse build errors | 95%+ |
-| `compress_context` | 83 | Generic content compression | 40-60% |
-| `deduplicate_errors` | 56 | Group repeated errors | 80-95% |
-| `code_skeleton` | 66 | Extract signatures only | 70-90% |
-| `diff_compress` | 66 | Compress git diffs | 50-80% |
-| `smart_pipeline` | 69 | Chain compression tools | varies |
-| `context_budget` | 96 | Pre-flight token estimation | - |
-| `conversation_compress` | 95 | Compress chat history | 40-70% |
-| `smart_cache` | 78 | Cache management | - |
-
-### Token Overhead & Lazy Loading
-
-CtxOpt uses **lazy loading** to minimize token overhead by **85%**:
-
-| Mode | Tokens | Use Case |
-|------|--------|----------|
-| **Core only** | 264 | Default startup (2 tools) |
-| **All tools** | 1,108 | Full suite (14 tools) |
-| **Savings** | **-85%** | Core vs All |
-
-**Break-even**: Content must exceed ~330 tokens for 80% compression to be net positive.
-
-Use `discover_tools` to browse available tools **without loading them**:
-
-```bash
-# Browse tools (metadata only, no loading)
-mcp__ctxopt__discover_tools category="compress"
-
-# Load tools when needed
-mcp__ctxopt__discover_tools category="compress" load=true
-
-# Search for specific tools
-mcp__ctxopt__discover_tools query="logs"
-```
-
-### TOON Format Output
-
-The `discover_tools` command supports [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) for **55% more compact** tool listings:
-
-```bash
-# TOON grouped format (metadata only, no loading)
-mcp__ctxopt__discover_tools format="toon"
-
-# TOON tabular format (most compact)
-mcp__ctxopt__discover_tools format="toon-tabular"
-
-# Load tools AND get full TOON with parameters
-mcp__ctxopt__discover_tools format="toon" load=true
-```
-
-**Lazy TOON output** (no loading):
-```
-core[2]:
-  auto_optimize → Auto-detect content type and apply...
-  smart_file_read → Read files with AST-based extraction
-compress[4]:
-  compress_context → Compress generic text content...
-  ...
-
-[lazy] metadata only (use load:true for full schemas)
-```
-
-**Full TOON output** (with `load=true`):
-```
-tools[15]:
-  auto_optimize(content hint?:build|logs|... aggressive?:bool) → Auto-compress 80-95%
-  smart_file_read(filePath target?:{type,name} query?) → AST code extraction
-  ...
-
-[tokens] json:1189 → toon:531 (-55%)
-[loaded] 15 tools activated
-```
-
-### Smart File Read Examples
+### Smart File Reading
 
 ```bash
 # Get file structure overview
@@ -173,138 +83,145 @@ mcp__ctxopt__smart_file_read filePath="src/server.ts" skeleton=true
 
 ### Compress Build Output
 
-After a failed build command, compress the output:
-
 ```bash
+# After a failed build, compress the output
 mcp__ctxopt__auto_optimize content="<paste npm/tsc/webpack output>"
 ```
 
 ### Code Execution SDK
 
-The `code_execute` tool provides **98% token savings** by letting LLMs write TypeScript instead of calling multiple MCP tools:
+The `code_execute` tool provides **98% token savings** by letting LLMs write TypeScript:
 
 ```bash
 mcp__ctxopt__code_execute code="return ctx.compress.auto(ctx.files.read('logs.txt'))"
 ```
 
-**SDK API (`ctx`):**
-
-| Namespace | Functions |
-|-----------|-----------|
-| `ctx.compress` | `auto(content, hint?)` `logs(logs)` `diff(diff)` `semantic(content, ratio?)` |
-| `ctx.code` | `parse(content, lang)` `extract(content, lang, {type, name})` `skeleton(content, lang)` |
-| `ctx.files` | `read(path)` `exists(path)` `glob(pattern)` |
-| `ctx.utils` | `countTokens(text)` `detectType(content)` `detectLanguage(path)` |
-
-**Examples:**
+**SDK API:**
 
 ```typescript
-// Compress all TypeScript files in src/
-const files = ctx.files.glob("src/**/*.ts");
-const skeletons = files.slice(0, 5).map(f => ({
-  file: f,
-  skeleton: ctx.code.skeleton(ctx.files.read(f), "typescript")
-}));
-return skeletons;
+// File operations
+ctx.files.read(path)
+ctx.files.glob(pattern)
+ctx.files.exists(path)
 
-// Summarize logs with token count
-const logs = ctx.files.read("server.log");
-const summary = ctx.compress.logs(logs);
-return { ...summary, tokens: ctx.utils.countTokens(logs) };
+// Code analysis
+ctx.code.skeleton(content, lang)
+ctx.code.extract(content, lang, {type, name})
+ctx.code.parse(content, lang)
 
-// Extract a specific function
-const content = ctx.files.read("src/api.ts");
-return ctx.code.extract(content, "typescript", { type: "function", name: "handleRequest" });
+// Compression
+ctx.compress.auto(content, hint?)
+ctx.compress.logs(logs)
+ctx.compress.diff(diff)
+ctx.compress.semantic(content, ratio?)
+
+// Git operations
+ctx.git.diff(ref?)
+ctx.git.log(limit?)
+ctx.git.blame(file, line?)
+
+// Search
+ctx.search.grep(pattern, glob?)
+ctx.search.symbols(query)
+
+// Analysis
+ctx.analyze.dependencies(file)
+ctx.analyze.callGraph(fn)
 ```
 
-**Security:** Code runs in a sandboxed environment with:
-- Blocked patterns: `eval`, `require`, `import()`, `process`, `global`
-- File access restricted to working directory
-- Sensitive files blocked (`.env`, credentials, keys)
-- Memory limit: 128MB, Timeout: 30s
-
-### View Session Statistics
+### Discover Tools
 
 ```bash
-mcp__ctxopt__session_stats
+# Browse available tools (metadata only)
+mcp__ctxopt__discover_tools category="compress"
+
+# Load tools when needed
+mcp__ctxopt__discover_tools category="compress" load=true
+
+# TOON format for compact output
+mcp__ctxopt__discover_tools format="toon"
+```
+
+## CLI Commands
+
+```bash
+distill-mcp setup          # Auto-configure detected IDEs
+distill-mcp setup --claude # Configure Claude Code only
+distill-mcp setup --cursor # Configure Cursor only
+distill-mcp doctor         # Verify installation
+distill-mcp serve          # Start MCP server
+distill-mcp analyze        # Analyze codebase token usage
+distill-mcp --help         # Show help
 ```
 
 ## IDE Configuration
 
 ### Claude Code
 
-After running `ctxopt-mcp setup`, your `~/.claude/settings.json` will include:
+After running `distill-mcp setup`, your config will include:
 
 ```json
 {
   "mcpServers": {
-    "ctxopt": {
-      "command": "ctxopt-mcp",
-      "args": ["serve"],
-      "env": {}
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp", "serve"]
     }
   }
 }
 ```
 
-### Cursor
+### Cursor / Windsurf
 
-Configuration is added to `~/.cursor/mcp.json` (or platform-specific location).
+Configuration is automatically added to the appropriate settings file.
 
-### Windsurf
+## Token Overhead
 
-Configuration is added to `~/.windsurf/settings.json`.
+Distill uses **lazy loading** to minimize overhead:
 
-## Development Setup
+| Mode | Tokens | Description |
+|------|--------|-------------|
+| Core only | 264 | Default (4 tools) |
+| All tools | 1,108 | Full suite (21 tools) |
+| **Savings** | **76%** | Lazy vs eager loading |
 
-### 1. Install dependencies
+## Security
+
+Code execution runs in a sandboxed environment:
+- Blocked: `eval`, `require`, `import()`, `process`, `global`
+- File access restricted to working directory
+- Sensitive files blocked (`.env`, credentials, keys)
+- Memory limit: 128MB, Timeout: 30s
+
+## Development
 
 ```bash
+# Install dependencies
 bun install
-```
 
-### 2. Setup environment
+# Run tests
+bun run test
 
-```bash
-cp apps/web/.env.example apps/web/.env.local
-# Edit .env.local with your credentials
-```
+# Build
+bun run build
 
-### 3. Setup database
-
-```bash
-bun run db:generate
-bun run db:migrate
-```
-
-### 4. Start development
-
-```bash
+# Start dev server
 bun run dev
 ```
 
-## Project Structure
+## Contributing
 
-```
-ctxopt/
-├── apps/
-│   └── web/                  # Next.js 16 SaaS platform
-├── packages/
-│   ├── mcp-server/           # MCP Server for IDE integration
-│   ├── shared/               # Shared types, utils, constants
-│   ├── ui/                   # React component library
-│   ├── eslint-config/        # Shared ESLint configs
-│   └── typescript-config/    # Shared TypeScript configs
-```
+Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
-## Tech Stack
-
-- **Frontend**: Next.js 16, React 19, Tailwind CSS
-- **Backend**: TypeScript, Bun
-- **Database**: PostgreSQL (Neon), Drizzle ORM
-- **Auth**: Clerk
-- **Hosting**: Vercel
+**Priority areas:**
+- New language parsers (Java, C#, Kotlin)
+- SDK extensions
+- Documentation
 
 ## License
 
 MIT
+
+---
+
+**[npm](https://www.npmjs.com/package/distill-mcp)** · **[GitHub](https://github.com/ArthurDEV44/ctxopt)** · **[Documentation](./docs)**
