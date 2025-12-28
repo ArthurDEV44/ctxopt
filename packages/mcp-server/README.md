@@ -211,7 +211,7 @@ bun run dev
 
 ## Contributing
 
-Contributions welcome! See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+Contributions welcome! See [CONTRIBUTING.md](https://github.com/ArthurDEV44/distill/blob/main/CONTRIBUTING.md) for guidelines.
 
 **Priority areas:**
 - New language parsers (Java, C#, Kotlin)
@@ -224,4 +224,4 @@ MIT
 
 ---
 
-**[npm](https://www.npmjs.com/package/distill-mcp)** · **[GitHub](https://github.com/ArthurDEV44/distill)** · **[Documentation](./docs)**
+**[npm](https://www.npmjs.com/package/distill-mcp)** · **[GitHub](https://github.com/ArthurDEV44/distill)** · **[Documentation](https://github.com/ArthurDEV44/distill/tree/main/docs)**
