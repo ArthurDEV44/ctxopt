@@ -70,13 +70,13 @@ Common model IDs:
 
 ### Available MCP Tools
 
-**Core Tools** (always loaded - 249 tokens overhead):
+**Core Tools** (always loaded - 264 tokens overhead):
 
 | Tool | Tokens | Purpose | Savings |
 |------|--------|---------|---------|
 | `smart_file_read` | 106 | Read code with AST extraction | 50-70% |
 | `auto_optimize` | 80 | Auto-detect and compress content | 40-95% |
-| `discover_tools` | 63 | Load additional tools on-demand | - |
+| `discover_tools` | 78 | Load tools, supports TOON format | 55% (TOON) |
 
 **On-Demand Tools** (loaded via `discover_tools`):
 
@@ -98,9 +98,9 @@ Common model IDs:
 
 CtxOpt uses **dynamic tool loading** to minimize overhead:
 
-- **Core tools**: 249 tokens per request (always available)
-- **All tools**: 1,093 tokens (if all loaded)
-- **Break-even**: Content must exceed ~312 tokens for 80% compression to be net positive
+- **Core tools**: 264 tokens per request (always available)
+- **All tools**: 1,108 tokens (if all loaded)
+- **Break-even**: Content must exceed ~330 tokens for 80% compression to be net positive
 
 Use `discover_tools` to load only what you need:
 
@@ -110,6 +110,28 @@ mcp__ctxopt__discover_tools category="compress" load=true
 
 # Search for specific tools
 mcp__ctxopt__discover_tools query="logs"
+```
+
+### TOON Format Output
+
+The `discover_tools` command supports [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) for **55% more compact** tool listings:
+
+```bash
+# TOON grouped format
+mcp__ctxopt__discover_tools format="toon"
+
+# TOON tabular format (most compact)
+mcp__ctxopt__discover_tools format="toon-tabular"
+```
+
+**Example TOON output:**
+```
+tools[15]:
+  auto_optimize(content hint?:build|logs|... aggressive?:bool) → Auto-compress 80-95%
+  smart_file_read(filePath target?:{type,name} query?) → AST code extraction
+  ...
+
+[tokens] json:1189 → toon:531 (-55%)
 ```
 
 ### Smart File Read Examples

@@ -172,6 +172,37 @@ Get context engineering best practices.
 optimization_tips focus="prompts"
 ```
 
+## Discovery Tools
+
+### discover_tools
+
+Find and load optimization tools on-demand. Supports TOON format for compact output.
+
+```
+discover_tools category="compress" load=true
+discover_tools query="logs"
+discover_tools format="toon"
+discover_tools format="toon-tabular"
+```
+
+**Categories:** `compress`, `analyze`, `logs`, `code`, `pipeline`
+
+**Formats:**
+- `list` - Default human-readable format
+- `toon` - TOON format grouped by category (55% fewer tokens)
+- `toon-tabular` - TOON tabular format (most compact)
+
+**TOON Output Example:**
+```
+tools[15]:
+  auto_optimize(content hint?:build|logs|... aggressive?:bool) → Auto-compress 80-95%
+  smart_file_read(filePath target?:{type,name} query?) → AST code extraction
+  compress_context(content contentType?:logs|...) → Compress verbose text 40-90%
+  ...
+
+[tokens] json:1189 → toon:531 (-55%)
+```
+
 ## Utility Tools
 
 ### smart_cache
@@ -212,3 +243,14 @@ register_model model="claude-opus-4-5-20251101"
 | diff_compress | Git diffs | 50-95% |
 | conversation_compress | Chat history | 40-70% |
 | semantic_compress | Documents | 40-60% |
+| discover_tools (TOON) | Tool listings | 55% |
+
+## About TOON Format
+
+[TOON (Token-Oriented Object Notation)](https://toonformat.dev/) is a compact, human-readable format designed specifically for LLM inputs. It provides:
+
+- **55% fewer tokens** compared to JSON for tool listings
+- **Lossless** representation of structured data
+- **Human-readable** syntax with YAML-like indentation
+
+TOON is particularly effective for tabular data and uniform arrays, making it ideal for presenting tool catalogs to LLMs.
