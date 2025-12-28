@@ -6,6 +6,7 @@
  */
 
 import type { ToolDefinition } from "./registry.js";
+import { createBM25Index, type BM25Index, type BM25Result } from "../utils/bm25.js";
 
 export type ToolCategory = "compress" | "analyze" | "logs" | "code" | "pipeline" | "core";
 
@@ -172,6 +173,21 @@ export const TOOL_CATALOG: ToolMetadata[] = [
 export class DynamicToolLoader {
   private loadedTools: Map<string, ToolDefinition> = new Map();
   private onChangeCallbacks: Array<() => void> = [];
+  private bm25Index: BM25Index<ToolMetadata> | null = null;
+
+  /**
+   * Get or create BM25 search index (lazy initialization)
+   */
+  private getBM25Index(): BM25Index<ToolMetadata> {
+    if (!this.bm25Index) {
+      this.bm25Index = createBM25Index(
+        TOOL_CATALOG,
+        (tool) => `${tool.name} ${tool.keywords.join(" ")} ${tool.description}`,
+        { k1: 1.2, b: 0.75 }
+      );
+    }
+    return this.bm25Index;
+  }
 
   /**
    * Get metadata for all available tools (without loading them)
@@ -185,16 +201,22 @@ export class DynamicToolLoader {
   }
 
   /**
-   * Search tools by query string
+   * Search tools by query string using BM25 ranking
+   * Returns results sorted by relevance score (most relevant first)
    */
   searchTools(query: string): ToolMetadata[] {
-    const q = query.toLowerCase();
-    return TOOL_CATALOG.filter(
-      (t) =>
-        t.name.includes(q) ||
-        t.keywords.some((k) => k.includes(q)) ||
-        t.description.toLowerCase().includes(q)
-    );
+    const index = this.getBM25Index();
+    const results = index.search(query);
+    return results.map((r) => r.item);
+  }
+
+  /**
+   * Search tools with BM25 scores and matched terms
+   * Useful for debugging or displaying search relevance
+   */
+  searchToolsWithScores(query: string): BM25Result<ToolMetadata>[] {
+    const index = this.getBM25Index();
+    return index.search(query);
   }
 
   /**

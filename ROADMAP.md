@@ -1,0 +1,270 @@
+# CtxOpt Roadmap
+
+Strategic roadmap for CtxOpt - the open source MCP server for LLM token optimization.
+
+---
+
+## Vision
+
+Position CtxOpt as the **comprehensive token optimization layer** for AI coding assistants, complementing Anthropic's Tool Search Tool with content-focused compression.
+
+```
+Tool Search Tool (Anthropic) = "Which tools to load?"
+CtxOpt                       = "How to compress content?"
+CtxOpt + Smart Search        = "Both, optimized"
+```
+
+---
+
+## Phase 1: Core Stability (Current)
+
+**Status: Complete**
+
+| Feature | Status | Token Savings |
+|---------|--------|---------------|
+| `auto_optimize` | Done | 40-95% |
+| `smart_file_read` (AST) | Done | 50-70% |
+| `code_execute` SDK | Done | 98% |
+| `semantic_compress` (TF-IDF) | Done | 40-60% |
+| `summarize_logs` | Done | 80-90% |
+| `diff_compress` | Done | 50-80% |
+| Lazy MCP (`browse_tools`/`run_tool`) | Done | 95% |
+
+**Supported Languages**: TypeScript, JavaScript, Python, Go, Rust, PHP, Swift
+
+---
+
+## Phase 2: Smart Search
+
+**Goal**: Achieve feature parity with Anthropic's Tool Search Tool while maintaining content compression advantage.
+
+### 2.1 BM25 Tool Search
+
+**Status: Complete**
+
+```typescript
+// DynamicToolLoader now uses BM25 ranking
+loader.searchTools("compress logs")
+// Returns ranked results: summarize_logs, auto_optimize, compress_context
+
+// With scores for debugging
+loader.searchToolsWithScores("compress logs")
+// Returns: [{ item: ToolMetadata, score: 2.5, matchedTerms: ["compress", "logs"] }]
+```
+
+**Implementation**:
+- [x] Add BM25 scoring algorithm (`packages/mcp-server/src/utils/bm25.ts`)
+- [x] Tool catalog already has keywords/tags (TOOL_CATALOG)
+- [x] Integrated BM25 into `DynamicToolLoader.searchTools()`
+- [x] Added `searchToolsWithScores()` for relevance debugging
+
+### 2.2 Semantic Search (Optional)
+
+- [ ] Add embedding-based search (local model, no API)
+- [ ] Cache embeddings for tool descriptions
+- [ ] Hybrid BM25 + semantic ranking
+
+---
+
+## Phase 3: SDK Enhancement
+
+**Goal**: Make `code_execute` the killer feature - things competitors can't easily replicate.
+
+### 3.1 Extended SDK API
+
+```typescript
+// Current SDK
+ctx.files.read(path)
+ctx.files.glob(pattern)
+ctx.code.skeleton(content, lang)
+ctx.compress.auto(content)
+
+// New additions
+ctx.git.diff(ref?)              // Git diff with auto-compression
+ctx.git.log(limit?)             // Commit history
+ctx.git.blame(file, line?)      // Blame info
+ctx.search.grep(pattern, glob?) // Integrated grep
+ctx.search.symbols(query)       // Cross-file symbol search
+ctx.analyze.dependencies(file)  // Import/export analysis
+ctx.analyze.callGraph(fn)       // Function call graph
+```
+
+**Tasks**:
+- [ ] `ctx.git.*` - Git operations module
+- [ ] `ctx.search.*` - Code search module
+- [ ] `ctx.analyze.*` - Static analysis module
+- [ ] Improve sandbox security for new operations
+- [ ] Add SDK documentation with examples
+
+### 3.2 Composable Pipelines
+
+```typescript
+// Chain operations declaratively
+ctx.pipeline([
+  { glob: "src/**/*.ts" },
+  { filter: f => !f.includes("test") },
+  { map: f => ctx.code.skeleton(ctx.files.read(f), "ts") },
+  { compress: "semantic", ratio: 0.3 }
+])
+```
+
+- [ ] Pipeline DSL design
+- [ ] Built-in pipeline templates
+- [ ] Pipeline result caching
+
+---
+
+## Phase 4: Intelligence Layer
+
+**Goal**: Proactive optimization suggestions and automatic context management.
+
+### 4.1 Context Budget Manager
+
+```typescript
+// Pre-flight estimation
+context_budget({
+  files: ["src/**/*.ts"],
+  operation: "refactor",
+  target_tokens: 50000
+})
+// Returns: recommended approach, estimated tokens, warnings
+```
+
+- [ ] Intelligent file selection based on relevance
+- [ ] Token budget recommendations
+- [ ] Warning system for oversized contexts
+
+### 4.2 Retry Loop Detection Enhancement
+
+- [ ] Pattern recognition for common failure loops
+- [ ] Automatic suggestion of alternative approaches
+- [ ] Integration with error deduplication
+
+### 4.3 Session Analytics
+
+```typescript
+session_stats()
+// Returns: tokens saved, cost reduction, optimization breakdown
+```
+
+- [ ] Per-tool usage statistics
+- [ ] Cumulative savings tracking
+- [ ] Exportable session reports
+
+---
+
+## Phase 5: Ecosystem Integration
+
+**Goal**: Seamless integration with major AI coding tools.
+
+### 5.1 IDE-Specific Optimizations
+
+| IDE | Integration |
+|-----|-------------|
+| Claude Code | Native MCP (current) |
+| Cursor | MCP server config |
+| Windsurf | MCP server config |
+| VS Code + Continue | MCP adapter |
+
+- [ ] One-click setup scripts per IDE
+- [ ] IDE-specific configuration templates
+- [ ] Integration documentation
+
+### 5.2 CI/CD Integration
+
+```yaml
+# GitHub Actions example
+- uses: ctxopt/action@v1
+  with:
+    analyze: true
+    report: token-usage.json
+```
+
+- [ ] GitHub Action for token usage analysis
+- [ ] Pre-commit hook for large file warnings
+- [ ] PR comment with optimization suggestions
+
+---
+
+## Phase 6: Advanced Compression
+
+**Goal**: Push compression boundaries with advanced techniques.
+
+### 6.1 Multi-File Context Compression
+
+- [ ] Cross-file deduplication (shared imports, types)
+- [ ] Dependency-aware skeleton extraction
+- [ ] Smart chunking for large codebases
+
+### 6.2 Conversation Memory Compression
+
+- [ ] Long conversation summarization
+- [ ] Key decision extraction
+- [ ] Context restoration from compressed state
+
+### 6.3 Output Format Optimization
+
+- [ ] TOON format for all tool outputs
+- [ ] Configurable verbosity levels
+- [ ] Structured vs prose output modes
+
+---
+
+## Non-Goals
+
+Things we explicitly won't pursue:
+
+| Non-Goal | Reason |
+|----------|--------|
+| Cloud/SaaS version | Keep it local, private, free |
+| API key requirements | Zero-config philosophy |
+| ML-based compression | Latency concerns, dependency bloat |
+| Full IDE replacement | Stay focused on optimization |
+
+---
+
+## Success Metrics
+
+| Metric | Target |
+|--------|--------|
+| Average token savings | >60% |
+| Setup time | <2 minutes |
+| Latency overhead | <100ms per operation |
+| Supported languages | 10+ |
+| GitHub stars | Community growth indicator |
+
+---
+
+## Contributing
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+**Priority areas for contributions**:
+1. New language parsers (Java, C#, Kotlin)
+2. SDK extensions (`ctx.git.*`, `ctx.search.*`)
+3. Semantic search with embeddings (Phase 2.2)
+4. Documentation and examples
+
+---
+
+## Changelog
+
+### v0.2.0 (Current)
+- BM25 search algorithm for tool discovery
+- `searchToolsWithScores()` API for relevance debugging
+- 19 optimization tools
+- 7 language parsers
+- Lazy MCP pattern
+- `code_execute` SDK
+
+### v0.1.0
+- Initial release
+- 19 optimization tools
+- 7 language parsers
+- Lazy MCP pattern
+- `code_execute` SDK
+
+### Next Release
+- Extended SDK (`ctx.git.*`, `ctx.search.*`)
+- Improved session analytics
+- Semantic search (optional)
