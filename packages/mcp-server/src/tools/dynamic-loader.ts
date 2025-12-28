@@ -168,6 +168,22 @@ export const TOOL_CATALOG: ToolMetadata[] = [
       };
     },
   },
+
+  // Intelligence layer
+  {
+    name: "detect_retry_loop",
+    category: "analyze",
+    keywords: ["retry", "loop", "build", "test", "fail", "repeat", "stuck"],
+    description: "Detect retry loops in command history",
+    loader: async () => (await import("./detect-retry-loop.js")).detectRetryLoopTool,
+  },
+  {
+    name: "session_stats",
+    category: "core",
+    keywords: ["session", "stats", "statistics", "tokens", "saved", "analytics"],
+    description: "Get session-wide token savings and usage statistics",
+    loader: async () => (await import("./session-stats.js")).sessionStatsTool,
+  },
 ];
 
 /**

@@ -157,6 +157,8 @@ ctx.pipeline.analyzeDeps(file)       // Analyser dépendances
 
 ### 4.1 Context Budget Manager
 
+**Status: Complete**
+
 ```typescript
 // Pre-flight estimation
 context_budget({
@@ -167,26 +169,30 @@ context_budget({
 // Returns: recommended approach, estimated tokens, warnings
 ```
 
-- [ ] Intelligent file selection based on relevance
-- [ ] Token budget recommendations
-- [ ] Warning system for oversized contexts
+- [x] Intelligent file selection based on relevance
+- [x] Token budget recommendations
+- [x] Warning system for oversized contexts
 
 ### 4.2 Retry Loop Detection Enhancement
 
-- [ ] Pattern recognition for common failure loops
-- [ ] Automatic suggestion of alternative approaches
-- [ ] Integration with error deduplication
+**Status: Complete**
+
+- [x] Pattern recognition for common failure loops
+- [x] Automatic suggestion of alternative approaches
+- [x] Integration with error deduplication
 
 ### 4.3 Session Analytics
+
+**Status: Complete**
 
 ```typescript
 session_stats()
 // Returns: tokens saved, cost reduction, optimization breakdown
 ```
 
-- [ ] Per-tool usage statistics
-- [ ] Cumulative savings tracking
-- [ ] Exportable session reports
+- [x] Per-tool usage statistics
+- [x] Cumulative savings tracking
+- [x] Exportable session reports
 
 ---
 
@@ -316,3 +322,5 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 - Git sandbox security: blocked network commands, argument sanitization
 - Pipeline result caching with SmartCache integration
 - SDK.md documentation with comprehensive examples
+- `detect_retry_loop` tool: command history analysis, pattern detection, suggestions
+- `session_stats` tool: per-session analytics, token savings, cost estimation
