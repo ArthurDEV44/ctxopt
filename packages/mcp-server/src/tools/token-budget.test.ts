@@ -42,7 +42,7 @@ const TOKEN_BUDGETS = {
   // Core tools (always loaded) - ultra-minimal
   auto_optimize: 90,
   smart_file_read: 120,
-  discover_tools: 75,
+  discover_tools: 80, // +5 for TOON format option
 
   // Compress category - aggressively optimized
   compress_context: 95,
@@ -334,11 +334,12 @@ describe("Regression Prevention", () => {
    * - Removed property descriptions (moved to tool description)
    * - Removed rarely-used properties from public schema
    * - Simplified nested object type declarations
+   * - Added TOON format output option to discover_tools
    */
   const CURRENT_SNAPSHOT = {
     auto_optimize: 80,
     smart_file_read: 106,
-    discover_tools: 63,
+    discover_tools: 78, // +15 for TOON format option (list|toon|toon-tabular)
   };
 
   // Tolerance: ±5 tokens for minor changes

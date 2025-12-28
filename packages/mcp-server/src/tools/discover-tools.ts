@@ -3,10 +3,17 @@
  *
  * Allows LLMs to discover and load available tools on-demand,
  * reducing initial token consumption by ~80%.
+ *
+ * Supports TOON output format for additional ~40% token savings.
  */
 
 import type { ToolDefinition } from "./registry.js";
-import { getDynamicLoader, type ToolCategory } from "./dynamic-loader.js";
+import { getDynamicLoader, TOOL_CATALOG, type ToolCategory } from "./dynamic-loader.js";
+import {
+  serializeToolsToToon,
+  serializeToolsToToonTabular,
+  compareTokens,
+} from "../utils/toon-serializer.js";
 
 // Minimal schema - descriptions in tool description, not properties
 const discoverToolsSchema = {
@@ -15,22 +22,26 @@ const discoverToolsSchema = {
     query: { type: "string" },
     category: { enum: ["compress", "analyze", "logs", "code", "pipeline"] },
     load: { type: "boolean" },
+    format: { enum: ["list", "toon", "toon-tabular"] },
   },
 };
+
+type OutputFormat = "list" | "toon" | "toon-tabular";
 
 interface DiscoverToolsArgs {
   query?: string;
   category?: ToolCategory;
   load?: boolean;
+  format?: OutputFormat;
 }
 
 async function executeDiscoverTools(
   args: unknown
 ): Promise<{ content: Array<{ type: "text"; text: string }> }> {
-  const { query, category, load = false } = args as DiscoverToolsArgs;
+  const { query, category, load = false, format = "list" } = args as DiscoverToolsArgs;
   const loader = getDynamicLoader();
 
-  // Get matching tools
+  // Get matching tools metadata
   let matches: Array<{ name: string; category: ToolCategory; description: string }>;
 
   if (query) {
@@ -58,7 +69,77 @@ async function executeDiscoverTools(
     loadedCount = loaded.length;
   }
 
-  // Format output
+  // Handle TOON format output
+  if (format === "toon" || format === "toon-tabular") {
+    return formatToonOutput(matches, format, load, loadedCount);
+  }
+
+  // Default list format
+  return formatListOutput(matches, loader, load, loadedCount);
+}
+
+/**
+ * Format output as TOON (Token-Oriented Object Notation)
+ */
+async function formatToonOutput(
+  matches: Array<{ name: string; category: ToolCategory; description: string }>,
+  format: "toon" | "toon-tabular",
+  load: boolean,
+  loadedCount: number
+): Promise<{ content: Array<{ type: "text"; text: string }> }> {
+  if (matches.length === 0) {
+    return {
+      content: [{ type: "text", text: "No tools found.\nCategories: compress|analyze|logs|code|pipeline" }],
+    };
+  }
+
+  // Load full tool definitions to get schemas
+  const loader = getDynamicLoader();
+  const toolDefs = await loader.loadByNames(matches.map((m) => m.name));
+
+  // Build category map
+  const categories = new Map<string, string>();
+  for (const m of matches) {
+    categories.set(m.name, m.category);
+  }
+
+  // Serialize to TOON
+  let toonOutput: string;
+  if (format === "toon-tabular") {
+    toonOutput = serializeToolsToToonTabular(toolDefs);
+  } else {
+    toonOutput = serializeToolsToToon(toolDefs, {
+      groupByCategory: true,
+      categories,
+    });
+  }
+
+  // Add token savings info
+  const stats = compareTokens(toolDefs);
+  const lines = [
+    toonOutput,
+    "",
+    `[tokens] json:${stats.json} → toon:${format === "toon-tabular" ? stats.toonTabular : stats.toon} (-${stats.savings}%)`,
+  ];
+
+  if (load) {
+    lines.push(`[loaded] ${loadedCount} tools activated`);
+  }
+
+  return {
+    content: [{ type: "text", text: lines.join("\n") }],
+  };
+}
+
+/**
+ * Format output as standard list
+ */
+function formatListOutput(
+  matches: Array<{ name: string; category: ToolCategory; description: string }>,
+  loader: ReturnType<typeof getDynamicLoader>,
+  load: boolean,
+  loadedCount: number
+): { content: Array<{ type: "text"; text: string }> } {
   const lines: string[] = [];
 
   if (matches.length === 0) {
