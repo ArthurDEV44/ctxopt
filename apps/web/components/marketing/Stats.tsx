@@ -1,7 +1,7 @@
 'use client';
 
 import { motion, useReducedMotion, type Variants } from 'motion/react';
-import { BookOpen, Zap, GitMerge, LucideIcon } from 'lucide-react';
+import { FileCode, Zap, Cpu, LucideIcon } from 'lucide-react';
 import { useHydrated } from '@/hooks';
 
 interface Feature {
@@ -13,22 +13,22 @@ interface Feature {
 
 const features: Feature[] = [
   {
-    Icon: BookOpen,
-    title: 'Base de Connaissances Sémantique',
-    subtitle: 'DOCUMENTATION COMPLÈTE',
-    description: 'Chaque agent est livré avec des définitions SKILL rigoureuses, des RÉFÉRENCES architecturales et des en-têtes contextuels. Mise à jour automatique pour rester en veille à chaque appel.',
+    Icon: FileCode,
+    title: 'AST-Aware Parsing',
+    subtitle: '7 LANGUAGES SUPPORTED',
+    description: 'Extract functions, classes, and types from code files with intelligent AST parsing. Supports TypeScript, JavaScript, Python, Go, Rust, PHP, and Swift.',
   },
   {
     Icon: Zap,
-    title: 'Serveur MCP Horus',
-    subtitle: 'ACCÈS INSTANTANÉ',
-    description: 'Installez le serveur MCP Horus et accédez à tous les agents directement depuis Claude Code. Plus besoin de télécharger, tout est disponible en une commande.',
+    title: 'Smart Compression',
+    subtitle: 'UP TO 98% SAVINGS',
+    description: 'Auto-detect content type and apply optimal compression. Build outputs, logs, diffs, and code are intelligently processed to minimize token usage.',
   },
   {
-    Icon: GitMerge,
-    title: 'Workflows Atomiques',
-    subtitle: 'PIPELINES DE PROCESSUS',
-    description: 'Protocoles d\'exécution déterministes, étape par étape, pour les cycles de refactoring, de tests et de déploiement.',
+    Icon: Cpu,
+    title: 'TypeScript SDK',
+    subtitle: 'ONE TOOL, MANY OPERATIONS',
+    description: 'Execute complex multi-step operations with a single tool call. Chain file reads, AST extraction, and compression in sandboxed TypeScript code.',
   },
 ];
 
@@ -61,10 +61,10 @@ const titleVariants: Variants = {
 function FeatureCard({ feature }: { feature: Feature }) {
   return (
     <div className="group relative h-full p-8 rounded-2xl bg-black/40 border border-white/10 backdrop-blur-md hover:bg-white/3 hover:border-tech-accent/30 transition-all duration-500 overflow-hidden">
-      {/* Effet Scanline sur la carte (au survol) */}
+      {/* Scanline effect on hover */}
       <div className="absolute inset-0 bg-linear-to-b from-transparent via-tech-accent/3 to-transparent -translate-y-full group-hover:animate-[shimmer_1.5s_infinite] pointer-events-none" />
 
-      {/* Icône - Flottante avec Lueur */}
+      {/* Icon with glow effect */}
       <div className="relative mb-8 inline-flex items-center justify-center">
         <div className="absolute inset-0 bg-tech-accent/20 blur-xl rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500 scale-150" />
         <div className="relative z-10 text-neutral-400 group-hover:text-tech-accent transition-colors duration-300 transform group-hover:-translate-y-1">
@@ -72,7 +72,7 @@ function FeatureCard({ feature }: { feature: Feature }) {
         </div>
       </div>
 
-      {/* Contenu Texte */}
+      {/* Text content */}
       <div className="relative space-y-4">
         <span className="inline-block text-[10px] font-mono text-tech-accent/60 uppercase tracking-widest border-b border-transparent group-hover:border-tech-accent/30 transition-all pb-1">
           {feature.subtitle}
@@ -102,11 +102,11 @@ function FeaturesStatic() {
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm shadow-[0_0_15px_-3px_rgba(34,211,238,0.15)]">
             <span className="w-1.5 h-1.5 rounded-full bg-tech-accent animate-pulse"></span>
             <span className="text-[10px] font-mono tracking-[0.2em] text-tech-accent uppercase">
-              Capacités Système
+              Core Features
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white">
-            Pourquoi déployer ces <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-200 to-neutral-500">agents ?</span>
+            Why use <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-200 to-neutral-500">Distill?</span>
           </h2>
         </div>
 
@@ -124,14 +124,14 @@ function FeaturesStatic() {
 function FeaturesAnimated() {
   return (
     <section className="relative py-32 px-6 bg-tech-black overflow-hidden">
-      {/* Effets de fond Nébuleuse / Poussière Cosmique */}
+      {/* Nebula / Cosmic dust background effects */}
       <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
         <div className="absolute -top-[20%] -right-[10%] w-[800px] h-[800px] bg-tech-accent/5 rounded-full blur-[120px]" />
         <div className="absolute -bottom-[20%] -left-[10%] w-[600px] h-[600px] bg-indigo-900/10 rounded-full blur-[100px]" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
-        {/* En-tête de Section */}
+        {/* Section header */}
         <div className="flex flex-col items-center mb-20 text-center space-y-4">
           <motion.div
             variants={badgeVariants}
@@ -143,7 +143,7 @@ function FeaturesAnimated() {
           >
             <span className="w-1.5 h-1.5 rounded-full bg-tech-accent animate-pulse"></span>
             <span className="text-[10px] font-mono tracking-[0.2em] text-tech-accent uppercase">
-              Capacités Système
+              Core Features
             </span>
           </motion.div>
 
@@ -155,11 +155,11 @@ function FeaturesAnimated() {
             transition={{ duration: 0.5, delay: 0.1, ease: "easeOut" }}
             className="text-3xl md:text-5xl font-bold tracking-tight text-white"
           >
-            Pourquoi déployer ces <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-200 to-neutral-500">agents ?</span>
+            Why use <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-200 to-neutral-500">Distill?</span>
           </motion.h2>
         </div>
 
-        {/* Grille de Features - Cartes Holographiques */}
+        {/* Features grid */}
         <motion.div
           variants={containerVariants}
           initial="hidden"
@@ -200,11 +200,11 @@ const Features = () => {
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm shadow-[0_0_15px_-3px_rgba(34,211,238,0.15)]">
               <span className="w-1.5 h-1.5 rounded-full bg-tech-accent animate-pulse"></span>
               <span className="text-[10px] font-mono tracking-[0.2em] text-tech-accent uppercase">
-                Capacités Système
+                Core Features
               </span>
             </div>
             <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white">
-              Pourquoi déployer ces <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-200 to-neutral-500">agents ?</span>
+              Why use <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-200 to-neutral-500">Distill?</span>
             </h2>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
