@@ -94,18 +94,25 @@ Common model IDs:
 | `conversation_compress` | 95 | Compress chat history | 40-70% |
 | `smart_cache` | 78 | Cache management | - |
 
-### Token Overhead
+### Token Overhead & Lazy Loading
 
-CtxOpt uses **dynamic tool loading** to minimize overhead:
+CtxOpt uses **lazy loading** to minimize token overhead by **85%**:
 
-- **Core tools**: 264 tokens per request (always available)
-- **All tools**: 1,108 tokens (if all loaded)
-- **Break-even**: Content must exceed ~330 tokens for 80% compression to be net positive
+| Mode | Tokens | Use Case |
+|------|--------|----------|
+| **Core only** | 264 | Default startup (2 tools) |
+| **All tools** | 1,108 | Full suite (14 tools) |
+| **Savings** | **-85%** | Core vs All |
 
-Use `discover_tools` to load only what you need:
+**Break-even**: Content must exceed ~330 tokens for 80% compression to be net positive.
+
+Use `discover_tools` to browse available tools **without loading them**:
 
 ```bash
-# Load compression tools
+# Browse tools (metadata only, no loading)
+mcp__ctxopt__discover_tools category="compress"
+
+# Load tools when needed
 mcp__ctxopt__discover_tools category="compress" load=true
 
 # Search for specific tools
@@ -117,14 +124,29 @@ mcp__ctxopt__discover_tools query="logs"
 The `discover_tools` command supports [TOON (Token-Oriented Object Notation)](https://toonformat.dev/) for **55% more compact** tool listings:
 
 ```bash
-# TOON grouped format
+# TOON grouped format (metadata only, no loading)
 mcp__ctxopt__discover_tools format="toon"
 
 # TOON tabular format (most compact)
 mcp__ctxopt__discover_tools format="toon-tabular"
+
+# Load tools AND get full TOON with parameters
+mcp__ctxopt__discover_tools format="toon" load=true
 ```
 
-**Example TOON output:**
+**Lazy TOON output** (no loading):
+```
+core[2]:
+  auto_optimize → Auto-detect content type and apply...
+  smart_file_read → Read files with AST-based extraction
+compress[4]:
+  compress_context → Compress generic text content...
+  ...
+
+[lazy] metadata only (use load:true for full schemas)
+```
+
+**Full TOON output** (with `load=true`):
 ```
 tools[15]:
   auto_optimize(content hint?:build|logs|... aggressive?:bool) → Auto-compress 80-95%
@@ -132,6 +154,7 @@ tools[15]:
   ...
 
 [tokens] json:1189 → toon:531 (-55%)
+[loaded] 15 tools activated
 ```
 
 ### Smart File Read Examples
