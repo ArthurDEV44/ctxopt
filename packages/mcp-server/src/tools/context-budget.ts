@@ -18,7 +18,7 @@ import {
   calculateCost,
   formatCost,
   calculateContextUsage,
-} from "@distill/shared";
+} from "../shared/index.js";
 
 /**
  * JSON Schema for MCP tool registration

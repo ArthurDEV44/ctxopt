@@ -5,7 +5,7 @@ import {
   calculateCost,
   formatCost,
   calculateContextUsage,
-} from "@distill/shared";
+} from "../shared/index.js";
 import type { ServerConfig } from "../server";
 
 export const analyzeContextSchema = {

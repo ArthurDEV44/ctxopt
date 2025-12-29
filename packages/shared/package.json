@@ -1,7 +1,14 @@
 {
   "name": "@distill/shared",
   "version": "0.1.0",
+  "description": "Shared types and utilities for Distill",
   "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ArthurDEV44/distill.git",
+    "directory": "packages/shared"
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
