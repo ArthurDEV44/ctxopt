@@ -4,6 +4,13 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Fumadocs UI styles */
+@import "fumadocs-ui/style.css";
+@import "fumadocs-ui/css/solar.css";
+@import "fumadocs-ui/css/preset.css";
+
+@source "../node_modules/fumadocs-ui/dist/**/*.js";
+
 @custom-variant dark (&:is(.dark *));
 
 @theme {

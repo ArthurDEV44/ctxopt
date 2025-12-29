@@ -1,9 +1,9 @@
 import { DocsLayout } from "fumadocs-ui/layouts/docs";
 import type { ReactNode } from "react";
+import Image from "next/image";
 import { source } from "@/lib/source";
 import { RootProvider } from "fumadocs-ui/provider/next";
 import { DocsLanguageSwitcher } from "@/components/DocsLanguageSwitcher";
-import "fumadocs-ui/style.css";
 
 export default async function Layout({
   children,
@@ -27,7 +27,18 @@ export default async function Layout({
       <DocsLayout
         tree={source.pageTree[lang]!}
         nav={{
-          title: "Distill",
+          title: (
+            <>
+              <Image
+                src="/distill-logo.png"
+                alt="Distill"
+                width={24}
+                height={24}
+                className="rounded"
+              />
+              Distill
+            </>
+          ),
           url: `/${lang === "fr" ? "" : lang}`,
           children: <DocsLanguageSwitcher />,
         }}
