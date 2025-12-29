@@ -1,6 +1,6 @@
 {
   "name": "distill-mcp",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "description": "Distill - MCP Server for LLM token optimization and context compression",
   "type": "module",
   "bin": {
