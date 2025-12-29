@@ -12,39 +12,46 @@ This guide walks you through setting up Distill with Cursor IDE.
 - Cursor installed ([download](https://cursor.sh))
 - Node.js 18+ installed
 
-## Step 1: Install Distill
+## Quick Setup (30 seconds)
 
 ```bash
 npm install -g distill-mcp
+distill-mcp setup --cursor
 ```
 
-## Step 2: Configure MCP in Cursor
+Done! Restart Cursor and you're ready.
 
-1. Open Cursor Settings (Cmd/Ctrl + ,)
-2. Search for "MCP" or navigate to Features > MCP Servers
-3. Add a new MCP server with this configuration:
+## Manual Setup
+
+If the automatic setup didn't work, edit `~/.cursor/mcp.json`:
 
 ```json
 {
-  "distill": {
-    "command": "npx",
-    "args": ["distill-mcp"]
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
   }
 }
 ```
 
-Alternatively, edit the config file directly at:
-- **macOS**: `~/Library/Application Support/Cursor/mcp.json`
-- **Windows**: `%APPDATA%\Cursor\mcp.json`
-- **Linux**: `~/.config/Cursor/mcp.json`
+Or with npx (no global install):
 
-## Step 3: Restart Cursor
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp", "serve"]
+    }
+  }
+}
+```
 
-Close and reopen Cursor to load the MCP server.
+## Verify Installation
 
-## Step 4: Verify
-
-In Cursor's AI chat, ask:
+Restart Cursor, then ask in the AI chat:
 
 ```
 What MCP tools are available?

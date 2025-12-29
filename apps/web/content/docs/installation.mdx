@@ -5,65 +5,57 @@ description: Install and configure Distill MCP Server
 
 # Installation
 
-Distill MCP Server can be installed globally or run directly with npx.
+Get started with Distill in under a minute.
+
+## Quick Start (Recommended)
+
+```bash
+# Install globally
+npm install -g distill-mcp
+
+# Auto-configure your IDE
+distill-mcp setup
+```
+
+That's it! The setup command auto-detects Claude Code, Cursor, and Windsurf.
 
 ## Prerequisites
 
 - **Node.js 18+** required
 - An MCP-compatible IDE (Claude Code, Cursor, or Windsurf)
 
-## Install Methods
+## Installation Options
 
-### Global Installation (Recommended)
+### Option 1: Global Install + Auto Setup
 
 ```bash
 npm install -g distill-mcp
+distill-mcp setup
 ```
 
-After installation, verify it works:
+### Option 2: Configure Specific IDE
 
 ```bash
-distill-mcp --version
-distill-mcp doctor
+distill-mcp setup --claude     # Claude Code only
+distill-mcp setup --cursor     # Cursor only
+distill-mcp setup --windsurf   # Windsurf only
 ```
 
-### Run with npx
-
-No installation needed - run directly:
+### Option 3: Run with npx (No Install)
 
 ```bash
 npx distill-mcp serve
 ```
 
-### From Source
+Then manually add to your IDE config (see below).
 
-```bash
-git clone https://github.com/ArthurDEV44/ctxopt
-cd distill
-bun install
-bun run build
-```
+## Manual IDE Configuration
 
-## IDE Configuration
-
-After installing, configure your IDE to use the MCP server.
+If you prefer manual setup or `distill-mcp setup` didn't work:
 
 ### Claude Code
 
 Edit `~/.claude/mcp.json`:
-
-```json
-{
-  "mcpServers": {
-    "distill": {
-      "command": "npx",
-      "args": ["distill-mcp"]
-    }
-  }
-}
-```
-
-Or with global install:
 
 ```json
 {
@@ -76,29 +68,44 @@ Or with global install:
 }
 ```
 
-### Cursor
-
-Edit Cursor's MCP settings (Settings > MCP Servers):
-
-```json
-{
-  "distill": {
-    "command": "npx",
-    "args": ["distill-mcp"]
-  }
-}
-```
-
-### Windsurf
-
-Edit `~/.windsurf/mcp.json`:
+Or with npx (no global install):
 
 ```json
 {
   "mcpServers": {
     "distill": {
       "command": "npx",
-      "args": ["distill-mcp"]
+      "args": ["distill-mcp", "serve"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Edit `~/.cursor/mcp.json` (or Settings > MCP Servers):
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
     }
   }
 }
@@ -106,26 +113,25 @@ Edit `~/.windsurf/mcp.json`:
 
 ## Verify Installation
 
-Run the doctor command to verify everything is configured:
-
 ```bash
+# Check everything is configured correctly
 distill-mcp doctor
 ```
 
-This checks:
-- Node.js version
-- Package installation
-- IDE configurations
+Then restart your IDE and ask: "Run the session_stats tool"
 
-## CLI Commands
+## CLI Reference
 
 ```bash
-distill-mcp serve      # Start the MCP server
 distill-mcp setup      # Auto-configure IDEs
+distill-mcp serve      # Start the MCP server
 distill-mcp doctor     # Check installation
-distill-mcp --help     # Show all commands
+distill-mcp analyze    # Analyze token usage in codebase
+distill-mcp --help     # Show all options
 ```
 
 ## Next Steps
 
-Once installed, check out the [MCP Tools Reference](/docs/mcp-tools) to see all available optimization tools.
+- [MCP Tools Reference](/docs/mcp-tools) - See all 21 optimization tools
+- [Claude Code Guide](/docs/guides/claude-code) - Advanced Claude Code setup
+- [Troubleshooting](/docs/troubleshooting) - Common issues and solutions

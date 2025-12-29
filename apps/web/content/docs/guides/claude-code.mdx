@@ -12,28 +12,20 @@ This guide walks you through setting up Distill with Claude Code.
 - Claude Code installed ([download](https://claude.ai/code))
 - Node.js 18+ installed
 
-## Step 1: Install Distill
+## Quick Setup (30 seconds)
 
 ```bash
 npm install -g distill-mcp
+distill-mcp setup --claude
 ```
 
-## Step 2: Configure MCP
+Done! Restart Claude Code and you're ready.
 
-Edit your Claude Code MCP configuration file at `~/.claude/mcp.json`:
+## Manual Setup
 
-```json
-{
-  "mcpServers": {
-    "distill": {
-      "command": "npx",
-      "args": ["distill-mcp"]
-    }
-  }
-}
-```
+If the automatic setup didn't work, configure manually:
 
-Or if you installed globally:
+Edit `~/.claude/mcp.json`:
 
 ```json
 {
@@ -46,19 +38,28 @@ Or if you installed globally:
 }
 ```
 
-## Step 3: Restart Claude Code
+Or with npx (no global install):
 
-Close and reopen Claude Code. You should see "Distill MCP Server running on stdio" in the logs.
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp", "serve"]
+    }
+  }
+}
+```
 
-## Step 4: Verify
+## Verify Installation
 
-Ask Claude to run `session_stats`:
+Restart Claude Code, then ask:
 
 ```
 Run the session_stats tool
 ```
 
-You should see session statistics including tokens used and saved.
+You should see session statistics with tokens used and saved.
 
 ## Using Distill Tools
 
@@ -98,9 +99,6 @@ When reading source code files for exploration, use:
 
 When you see large command output (>500 chars):
 - Use `auto_optimize` to compress it
-
-At session start:
-- Call `register_model` with your model ID
 ```
 
 ## Installing Project Hooks

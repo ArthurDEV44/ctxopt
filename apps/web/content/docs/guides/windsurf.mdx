@@ -12,36 +12,46 @@ This guide walks you through setting up Distill with Windsurf IDE.
 - Windsurf installed ([download](https://codeium.com/windsurf))
 - Node.js 18+ installed
 
-## Step 1: Install Distill
+## Quick Setup (30 seconds)
 
 ```bash
 npm install -g distill-mcp
+distill-mcp setup --windsurf
 ```
 
-## Step 2: Configure MCP
+Done! Restart Windsurf and you're ready.
 
-Edit your Windsurf MCP configuration file at `~/.windsurf/mcp.json`:
+## Manual Setup
+
+If the automatic setup didn't work, edit `~/.codeium/windsurf/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+Or with npx (no global install):
 
 ```json
 {
   "mcpServers": {
     "distill": {
       "command": "npx",
-      "args": ["distill-mcp"]
+      "args": ["distill-mcp", "serve"]
     }
   }
 }
 ```
 
-If the file doesn't exist, create it.
+## Verify Installation
 
-## Step 3: Restart Windsurf
-
-Close and reopen Windsurf to load the MCP server.
-
-## Step 4: Verify
-
-Ask Windsurf's AI to check available tools:
+Restart Windsurf, then ask:
 
 ```
 List the MCP tools available

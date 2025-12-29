@@ -63,8 +63,8 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 
 1. **Check config file exists:**
    - Claude Code: `~/.claude/mcp.json`
-   - Cursor: Check IDE settings
-   - Windsurf: `~/.windsurf/mcp.json`
+   - Cursor: `~/.cursor/mcp.json`
+   - Windsurf: `~/.codeium/windsurf/mcp_config.json`
 
 2. **Validate JSON syntax:**
    ```bash
@@ -73,12 +73,17 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 
 3. **Test server manually:**
    ```bash
-   npx distill-mcp serve --verbose
+   distill-mcp serve --verbose
    ```
 
 4. **Run doctor:**
    ```bash
    distill-mcp doctor
+   ```
+
+5. **Re-run setup:**
+   ```bash
+   distill-mcp setup --force
    ```
 
 ### Tools Not Appearing
@@ -104,11 +109,13 @@ export PATH="$(npm config get prefix)/bin:$PATH"
   "mcpServers": {
     "distill": {
       "command": "node",
-      "args": ["--max-old-space-size=4096", "npx", "distill-mcp"]
+      "args": ["--max-old-space-size=4096", "/path/to/distill-mcp", "serve"]
     }
   }
 }
 ```
+
+Find your distill-mcp path with: `which distill-mcp`
 
 ### Slow File Parsing
 
@@ -157,7 +164,7 @@ export PATH="$(npm config get prefix)/bin:$PATH"
 If you can't resolve an issue:
 
 1. Run `distill-mcp doctor` and include output
-2. Check [GitHub Issues](https://github.com/ArthurDEV44/ctxopt/issues)
+2. Check [GitHub Issues](https://github.com/ArthurDEV44/distill/issues)
 3. Open a new issue with:
    - Distill version (`distill-mcp --version`)
    - Node.js version (`node --version`)
