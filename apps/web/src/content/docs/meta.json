@@ -1,0 +1,18 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "index",
+    "---Démarrage---",
+    "installation",
+    "mcp-tools",
+    "---Guides---",
+    "guides/claude-code",
+    "guides/cursor",
+    "guides/windsurf",
+    "---Configuration---",
+    "guides/settings-local",
+    "guides/claude-md-setup",
+    "---Référence---",
+    "troubleshooting"
+  ]
+}

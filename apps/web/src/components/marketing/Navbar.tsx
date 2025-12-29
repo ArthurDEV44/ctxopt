@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { APP_NAME, NAV_LINKS, NavLink } from '../constants';
 import { Menu, X, Github } from 'lucide-react';
+import { LanguageSwitcher } from '../LanguageSwitcher';
 
 const Navbar: React.FC = () => {
   const [scrolled, setScrolled] = useState(false);
@@ -44,7 +45,8 @@ const Navbar: React.FC = () => {
 
         {/* Actions */}
         <div className="hidden md:flex items-center gap-4">
-          <a href="#" className="text-neutral-400 hover:text-white transition-colors">
+          <LanguageSwitcher />
+          <a href="https://github.com/ArthurDEV44/distill" target="_blank" rel="noopener noreferrer" className="text-neutral-400 hover:text-white transition-colors">
             <Github size={20} />
           </a>
         </div>
@@ -71,6 +73,9 @@ const Navbar: React.FC = () => {
               {link.label}
             </a>
           ))}
+          <div className="pt-2 border-t border-[#f4cf8b]/10">
+            <LanguageSwitcher />
+          </div>
         </div>
       )}
     </nav>

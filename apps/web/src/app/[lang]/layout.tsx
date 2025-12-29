@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
-import { Toaster } from "sonner";
-import "./globals.css";
+import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
   title: {
@@ -26,28 +25,19 @@ export const metadata: Metadata = {
     url: "https://distill.dev",
     siteName: "Distill",
     title: "Distill - Context Engineering for LLMs",
-    description:
-      "Open source MCP server for LLM token optimization.",
+    description: "Open source MCP server for LLM token optimization.",
   },
   twitter: {
     card: "summary_large_image",
     title: "Distill - Context Engineering for LLMs",
-    description:
-      "Open source MCP server for LLM token optimization.",
+    description: "Open source MCP server for LLM token optimization.",
   },
 };
 
-export default function RootLayout({
+export default async function LangLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    <html lang="en" className="dark" suppressHydrationWarning>
-      <body className="min-h-screen antialiased">
-        {children}
-        <Toaster position="bottom-right" />
-      </body>
-    </html>
-  );
+}: {
+  children: ReactNode;
+}) {
+  return <>{children}</>;
 }

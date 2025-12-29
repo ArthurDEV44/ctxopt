@@ -1,0 +1,92 @@
+---
+title: Intégration Windsurf
+description: Guide pas à pas pour intégrer Distill avec Windsurf
+---
+
+# Intégration Windsurf
+
+Ce guide vous accompagne dans la configuration de Distill avec l'IDE Windsurf.
+
+## Prérequis
+
+- Windsurf installé ([télécharger](https://codeium.com/windsurf))
+- Node.js 18+ installé
+
+## Configuration rapide (30 secondes)
+
+```bash
+npm install -g distill-mcp
+distill-mcp setup --windsurf
+```
+
+Terminé ! Redémarrez Windsurf et vous êtes prêt.
+
+## Configuration manuelle
+
+Si la configuration automatique n'a pas fonctionné, éditez `~/.codeium/windsurf/mcp_config.json` :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+Ou avec npx (sans installation globale) :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp", "serve"]
+    }
+  }
+}
+```
+
+## Vérifier l'installation
+
+Redémarrez Windsurf, puis demandez :
+
+```
+Liste les outils MCP disponibles
+```
+
+## Utilisation de Distill avec Windsurf
+
+### Analyse intelligente de fichiers
+
+```
+Utilise smart_file_read pour analyser src/components/Button.tsx
+```
+
+### Résumé des logs
+
+```
+Résume ces logs serveur : [collez les logs]
+```
+
+### Déduplication des erreurs
+
+Quand vous avez des erreurs répétées :
+
+```
+Déduplique ces erreurs : [collez la sortie de build]
+```
+
+## Dépannage
+
+### MCP ne charge pas
+
+1. Vérifiez l'emplacement du fichier de config : `~/.windsurf/mcp.json`
+2. Validez la syntaxe JSON
+3. Exécutez `distill-mcp doctor` pour vérifier l'installation
+
+### Erreurs de permissions
+
+Sur macOS, vous devrez peut-être autoriser le terminal dans Préférences Système > Sécurité et confidentialité.

@@ -1,0 +1,137 @@
+---
+title: Installation
+description: Installer et configurer le serveur MCP Distill
+---
+
+# Installation
+
+Démarrez avec Distill en moins d'une minute.
+
+## Démarrage rapide (Recommandé)
+
+```bash
+# Installer globalement
+npm install -g distill-mcp
+
+# Auto-configurer votre IDE
+distill-mcp setup
+```
+
+C'est tout ! La commande setup détecte automatiquement Claude Code, Cursor et Windsurf.
+
+## Prérequis
+
+- **Node.js 18+** requis
+- Un IDE compatible MCP (Claude Code, Cursor ou Windsurf)
+
+## Options d'installation
+
+### Option 1 : Installation globale + Auto Setup
+
+```bash
+npm install -g distill-mcp
+distill-mcp setup
+```
+
+### Option 2 : Configurer un IDE spécifique
+
+```bash
+distill-mcp setup --claude     # Claude Code uniquement
+distill-mcp setup --cursor     # Cursor uniquement
+distill-mcp setup --windsurf   # Windsurf uniquement
+```
+
+### Option 3 : Exécuter avec npx (Sans installation)
+
+```bash
+npx distill-mcp serve
+```
+
+Puis ajoutez manuellement à la config de votre IDE (voir ci-dessous).
+
+## Configuration manuelle de l'IDE
+
+Si vous préférez une configuration manuelle ou si `distill-mcp setup` n'a pas fonctionné :
+
+### Claude Code
+
+Éditez `~/.claude/mcp.json` :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+Ou avec npx (sans installation globale) :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp", "serve"]
+    }
+  }
+}
+```
+
+### Cursor
+
+Éditez `~/.cursor/mcp.json` (ou Paramètres > MCP Servers) :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+### Windsurf
+
+Éditez `~/.codeium/windsurf/mcp_config.json` :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"]
+    }
+  }
+}
+```
+
+## Vérifier l'installation
+
+```bash
+# Vérifier que tout est correctement configuré
+distill-mcp doctor
+```
+
+Puis redémarrez votre IDE et demandez : "Exécute l'outil session_stats"
+
+## Référence CLI
+
+```bash
+distill-mcp setup      # Auto-configurer les IDE
+distill-mcp serve      # Démarrer le serveur MCP
+distill-mcp doctor     # Vérifier l'installation
+distill-mcp analyze    # Analyser l'utilisation des tokens
+distill-mcp --help     # Afficher toutes les options
+```
+
+## Étapes suivantes
+
+- [Référence des outils MCP](/docs/mcp-tools) - Voir les 21 outils d'optimisation
+- [Guide Claude Code](/docs/guides/claude-code) - Configuration avancée de Claude Code
+- [Dépannage](/docs/troubleshooting) - Problèmes courants et solutions

@@ -8,7 +8,8 @@
     ],
     "baseUrl": ".",
     "paths": {
-      "@/*": ["./*"],
+      "@/*": ["./src/*"],
+      "@/.source/*": ["./.source/*"],
       "@distill/shared": ["../../packages/shared/src"],
       "@distill/shared/*": ["../../packages/shared/src/*"]
     }

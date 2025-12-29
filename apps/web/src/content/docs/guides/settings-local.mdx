@@ -1,0 +1,274 @@
+---
+title: Configuration des paramètres projet
+description: Configurer .claude/settings.local.json pour l'intégration Distill au niveau projet
+---
+
+# Configuration des paramètres projet
+
+Configurez Distill au niveau projet en utilisant `.claude/settings.local.json`. Ce fichier remplace les paramètres globaux pour un projet spécifique.
+
+## Emplacement du fichier
+
+Créez le fichier à la racine de votre projet :
+
+```
+votre-projet/
+├── .claude/
+│   └── settings.local.json
+├── CLAUDE.md
+├── src/
+└── ...
+```
+
+## Template complet
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp"],
+      "env": {}
+    }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools",
+      "mcp__distill__session_stats",
+      "mcp__distill__register_model"
+    ]
+  }
+}
+```
+
+## Options de configuration
+
+### Serveurs MCP
+
+Configurez le serveur MCP Distill :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp"],
+      "env": {}
+    }
+  }
+}
+```
+
+**Alternative avec installation globale :**
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "distill-mcp",
+      "args": ["serve"],
+      "env": {}
+    }
+  }
+}
+```
+
+### Permissions des outils
+
+Pré-approuvez les outils Distill pour éviter les demandes de permission :
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools",
+      "mcp__distill__session_stats",
+      "mcp__distill__register_model",
+      "mcp__distill__summarize_logs",
+      "mcp__distill__compress_context",
+      "mcp__distill__analyze_build_output",
+      "mcp__distill__deduplicate_errors",
+      "mcp__distill__semantic_compress",
+      "mcp__distill__code_skeleton",
+      "mcp__distill__diff_compress",
+      "mcp__distill__context_budget"
+    ]
+  }
+}
+```
+
+**Permissions minimales (outils principaux uniquement) :**
+
+```json
+{
+  "permissions": {
+    "allow": [
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools"
+    ]
+  }
+}
+```
+
+## Configuration minimale
+
+Pour une configuration rapide, utilisez cette configuration minimale :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp"]
+    }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__distill__*"
+    ]
+  }
+}
+```
+
+Le joker `mcp__distill__*` autorise tous les outils Distill sans demandes individuelles.
+
+## Paramètres globaux vs projet
+
+| Fichier | Emplacement | Portée |
+|---------|-------------|--------|
+| `~/.claude/settings.json` | Répertoire home | Tous les projets |
+| `.claude/settings.local.json` | Racine du projet | Projet actuel uniquement |
+
+Les paramètres projet **remplacent** les paramètres globaux. Utilisez les paramètres projet quand :
+- Différents projets nécessitent différentes configurations MCP
+- Vous voulez partager les paramètres avec votre équipe (commit dans git)
+- Vous avez besoin de permissions d'outils spécifiques au projet
+
+## Auto-configuration avec la CLI
+
+Générez la configuration automatiquement :
+
+```bash
+# Dans le répertoire de votre projet
+distill-mcp setup --local
+```
+
+Cela crée `.claude/settings.local.json` avec la configuration recommandée.
+
+## Combiner avec CLAUDE.md
+
+Pour une configuration optimale, utilisez les deux fichiers :
+
+1. **`.claude/settings.local.json`** - Serveur MCP et permissions
+2. **`CLAUDE.md`** - Instructions d'utilisation pour Claude
+
+```
+votre-projet/
+├── .claude/
+│   └── settings.local.json  # Config serveur + permissions
+├── CLAUDE.md                 # Directives d'utilisation
+└── ...
+```
+
+## Configuration Git
+
+### Commiter dans le dépôt (Recommandé)
+
+Partagez les paramètres avec votre équipe en commitant le fichier :
+
+```bash
+git add .claude/settings.local.json
+git commit -m "chore: ajout configuration MCP Distill"
+```
+
+### Garder privé
+
+Si vous ne voulez pas commiter les paramètres, ajoutez au `.gitignore` :
+
+```txt
+.claude/settings.local.json
+```
+
+## Variables d'environnement
+
+Passez des variables d'environnement au serveur MCP :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp"],
+      "env": {
+        "DISTILL_DEBUG": "true",
+        "DISTILL_LOG_LEVEL": "info"
+      }
+    }
+  }
+}
+```
+
+## Dépannage
+
+### Paramètres non appliqués
+
+1. Redémarrez Claude Code après avoir créé/modifié le fichier
+2. Vérifiez que la syntaxe JSON est valide :
+   ```bash
+   cat .claude/settings.local.json | python -m json.tool
+   ```
+3. Vérifiez l'emplacement du fichier (doit être à la racine du projet dans le dossier `.claude/`)
+
+### Le serveur MCP ne démarre pas
+
+1. Exécutez doctor pour vérifier l'installation :
+   ```bash
+   distill-mcp doctor
+   ```
+2. Essayez d'exécuter le serveur manuellement :
+   ```bash
+   npx distill-mcp serve
+   ```
+
+### Erreurs de permission refusée
+
+Ajoutez l'outil spécifique au tableau `permissions.allow` ou utilisez le pattern joker `mcp__distill__*`.
+
+## Exemple complet
+
+Configuration complète avec toutes les options :
+
+```json
+{
+  "mcpServers": {
+    "distill": {
+      "command": "npx",
+      "args": ["distill-mcp"],
+      "env": {}
+    }
+  },
+  "permissions": {
+    "allow": [
+      "mcp__distill__smart_file_read",
+      "mcp__distill__auto_optimize",
+      "mcp__distill__code_execute",
+      "mcp__distill__discover_tools",
+      "mcp__distill__session_stats",
+      "mcp__distill__register_model"
+    ]
+  }
+}
+```
+
+Cette configuration :
+- Active le serveur MCP Distill
+- Pré-approuve les outils principaux pour une utilisation fluide
+- Fonctionne avec les installations globales et locales
