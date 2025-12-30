@@ -97,17 +97,22 @@ const titleVariants: Variants = {
 };
 
 /** Feature card component (static, animations handled by parent) */
-function FeatureCard({ feature }: { feature: Feature }) {
+function FeatureCard({ feature, index }: { feature: Feature; index: number }) {
+  const featureId = `feature-${index}`;
+
   return (
-    <div className="group relative h-full p-8 rounded-2xl bg-[#311c35]/50 border border-[#f4cf8b]/30 backdrop-blur-md transition-all duration-500 overflow-hidden">
+    <article
+      className="group relative h-full p-8 rounded-2xl bg-[#311c35]/50 border border-[#f4cf8b]/30 backdrop-blur-md transition-all duration-500 overflow-hidden"
+      aria-labelledby={featureId}
+    >
       {/* Scanline effect on hover */}
-      <div className="absolute inset-0 bg-linear-to-b from-transparent via-[#f4cf8b]/5 to-transparent -translate-y-full animate-[shimmer_1.5s_infinite] pointer-events-none" />
+      <div className="absolute inset-0 bg-linear-to-b from-transparent via-[#f4cf8b]/5 to-transparent -translate-y-full animate-[shimmer_1.5s_infinite] pointer-events-none" aria-hidden="true" />
 
       {/* Icon with glow effect */}
-      <div className="relative mb-8 inline-flex items-center justify-center">
+      <div className="relative mb-8 inline-flex items-center justify-center" aria-hidden="true">
         <div className="absolute inset-0 bg-[#f4cf8b]/20 blur-xl rounded-full opacity-100 scale-150" />
         <div className="relative z-10 text-[#f4cf8b]">
-          <feature.Icon size={28} />
+          <feature.Icon size={28} aria-hidden="true" />
         </div>
       </div>
 
@@ -116,37 +121,37 @@ function FeatureCard({ feature }: { feature: Feature }) {
         <span className="inline-block text-[10px] font-mono text-[#f4cf8b]/60 uppercase tracking-widest border-b border-[#f4cf8b]/30 pb-1">
           {feature.subtitle}
         </span>
-        <h3 className="text-xl font-semibold text-[#f4cf8b]/90">
+        <h3 id={featureId} className="text-xl font-semibold text-[#f4cf8b]/90">
           {feature.title}
         </h3>
         <p className="text-sm text-neutral-300 leading-relaxed font-light">
           {feature.description}
         </p>
       </div>
-    </div>
+    </article>
   );
 }
 
 /** Static version rendered during SSR (hidden) */
 function FeaturesStatic({ t }: { t: StatsTranslations }) {
   return (
-    <section className="relative py-32 px-6 bg-transparent overflow-hidden" style={{ opacity: 0 }}>
+    <section className="relative py-32 px-6 bg-transparent overflow-hidden" style={{ opacity: 0 }} aria-labelledby="features-title">
       <div className="max-w-7xl mx-auto relative z-10">
         <div className="flex flex-col items-center mb-20 text-center space-y-4">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#311c35]/40 border border-[#f4cf8b]/20 backdrop-blur-sm shadow-[0_0_15px_-3px_rgba(244,207,139,0.15)]">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f4cf8b] animate-pulse"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f4cf8b] animate-pulse" aria-hidden="true" />
             <span className="text-[10px] font-mono tracking-[0.2em] text-[#f4cf8b] uppercase">
               {t.badge}
             </span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white">
+          <h2 id="features-title" className="text-3xl md:text-5xl font-bold tracking-tight text-white">
             {t.title} <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-[#f4cf8b] to-[#311c35]">{t.titleHighlight}</span>
           </h2>
         </div>
 
         <div className="grid grid-cols-3 gap-6 max-sm:grid-cols-1">
           {t.features.map((feature, index) => (
-            <FeatureCard key={index} feature={feature} />
+            <FeatureCard key={index} feature={feature} index={index} />
           ))}
         </div>
       </div>
@@ -157,7 +162,7 @@ function FeaturesStatic({ t }: { t: StatsTranslations }) {
 /** Animated version rendered after hydration */
 function FeaturesAnimated({ t }: { t: StatsTranslations }) {
   return (
-    <section className="relative py-32 px-6 bg-transparent overflow-hidden">
+    <section className="relative py-32 px-6 bg-transparent overflow-hidden" aria-labelledby="features-title">
       <div className="max-w-7xl mx-auto relative z-10">
         {/* Section header */}
         <div className="flex flex-col items-center mb-20 text-center space-y-4">
@@ -169,13 +174,14 @@ function FeaturesAnimated({ t }: { t: StatsTranslations }) {
             transition={{ duration: 0.5, ease: "easeOut" }}
             className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#311c35]/40 border border-[#f4cf8b]/20 backdrop-blur-sm shadow-[0_0_15px_-3px_rgba(244,207,139,0.15)]"
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-[#f4cf8b] animate-pulse"></span>
+            <span className="w-1.5 h-1.5 rounded-full bg-[#f4cf8b] animate-pulse" aria-hidden="true" />
             <span className="text-[10px] font-mono tracking-[0.2em] text-[#f4cf8b] uppercase">
               {t.badge}
             </span>
           </motion.div>
 
           <motion.h2
+            id="features-title"
             variants={titleVariants}
             initial="hidden"
             whileInView="visible"
@@ -197,7 +203,7 @@ function FeaturesAnimated({ t }: { t: StatsTranslations }) {
         >
           {t.features.map((feature, index) => (
             <motion.div key={index} variants={itemVariants} className="h-full">
-              <FeatureCard feature={feature} />
+              <FeatureCard feature={feature} index={index} />
             </motion.div>
           ))}
         </motion.div>
@@ -223,22 +229,22 @@ const Features = ({ lang = 'fr' }: FeaturesProps) => {
   // Skip animations for users who prefer reduced motion
   if (shouldReduceMotion) {
     return (
-      <section className="relative py-32 px-6 bg-transparent overflow-hidden">
+      <section className="relative py-32 px-6 bg-transparent overflow-hidden" aria-labelledby="features-title">
         <div className="max-w-7xl mx-auto relative z-10">
           <div className="flex flex-col items-center mb-20 text-center space-y-4">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#311c35]/40 border border-[#f4cf8b]/20 backdrop-blur-sm shadow-[0_0_15px_-3px_rgba(244,207,139,0.15)]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#f4cf8b] animate-pulse"></span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#f4cf8b] animate-pulse" aria-hidden="true" />
               <span className="text-[10px] font-mono tracking-[0.2em] text-[#f4cf8b] uppercase">
                 {t.badge}
               </span>
             </div>
-            <h2 className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-2 leading-[1.05]">
+            <h2 id="features-title" className="text-3xl md:text-5xl font-bold tracking-tight text-white mb-2 leading-[1.05]">
               {t.title} <span className="text-transparent bg-clip-text bg-linear-to-br from-white via-neutral-100 to-neutral-400">{t.titleHighlight}</span>
             </h2>
           </div>
           <div className="grid grid-cols-3 gap-6 max-sm:grid-cols-1">
             {t.features.map((feature, index) => (
-              <FeatureCard key={index} feature={feature} />
+              <FeatureCard key={index} feature={feature} index={index} />
             ))}
           </div>
         </div>

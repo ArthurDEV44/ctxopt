@@ -77,12 +77,13 @@ const variants: Record<string, Variants> = {
 const TechIndicator = ({ icon: Icon, label, value }: { icon: LucideIcon; label: string; value: string }) => (
   <div className="flex flex-col items-center gap-2 @sm:gap-3 z-10 transition-transform hover:scale-105 duration-300">
     <div className="p-2 rounded-full bg-[#f4cf8b]/10 ring-1 ring-[#f4cf8b]/50 backdrop-blur-xs">
-      <Icon className="text-[#f4cf8b] w-5 h-5 @md:w-6 @md:h-6" />
+      <Icon className="text-[#f4cf8b] w-5 h-5 @md:w-6 @md:h-6" aria-hidden="true" />
     </div>
     <div className="text-center flex flex-col">
       <span className="text-sm @md:text-base font-bold text-white tabular-nums tracking-tight">{value}</span>
       <span className="text-[10px] @md:text-xs tracking-widest font-mono uppercase text-white/60">{label}</span>
     </div>
+    <span className="sr-only">{value} {label}</span>
   </div>
 );
 
@@ -106,9 +107,10 @@ function CopyCommand() {
       <button
         onClick={handleCopy}
         className="relative flex items-center justify-center w-8 h-8 rounded-lg hover:bg-white/5 text-neutral-400 hover:text-white transition-colors focus:outline-none"
-        aria-label="Copy command"
+        aria-label={copied ? "Command copied to clipboard" : "Copy install command to clipboard"}
+        aria-live="polite"
       >
-        {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+        {copied ? <Check size={14} className="text-green-400" aria-hidden="true" /> : <Copy size={14} aria-hidden="true" />}
       </button>
       <div className="absolute inset-0 rounded-xl ring-1 ring-inset ring-transparent group-hover/cmd:ring-white/10 pointer-events-none" />
     </div>
@@ -144,7 +146,7 @@ const HeroContent = ({ t, isStatic = false }: { t: HeroTranslations; isStatic?: 
 
       {/* Main Title */}
       <Item {...scaleProps} className="relative z-20 mix-blend-overlay pointer-events-none">
-        <h1 className="text-[clamp(2.5rem,7cqi,6rem)] font-bold tracking-tighter text-white mb-2 leading-[1.05] text-balance drop-shadow-2xl">
+        <h1 id="hero-title" className="text-[clamp(2.5rem,7cqi,6rem)] font-bold tracking-tighter text-white mb-2 leading-[1.05] text-balance drop-shadow-2xl">
           <span className="block drop-shadow-[0_0_30px_rgba(244,207,139,0.2)] bg-clip-text text-transparent bg-gradient-to-b from-white to-white/80">
             {t.titleLine1}
           </span>
@@ -194,14 +196,14 @@ const Hero = ({ lang = 'fr' }: { lang?: string }) => {
 
   if (!mounted) {
     return (
-      <section className={containerClasses}>
+      <section className={containerClasses} aria-labelledby="hero-title">
         <HeroContent t={t} isStatic={true} />
       </section>
     );
   }
 
   return (
-    <section className={containerClasses}>
+    <section className={containerClasses} aria-labelledby="hero-title">
       <HeroContent t={t} />
     </section>
   );
