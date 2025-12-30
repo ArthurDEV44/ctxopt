@@ -7,7 +7,6 @@ import { Canvas } from '@react-three/fiber';
 import Navbar from '@/components/marketing/Navbar';
 import Footer from '@/components/marketing/Footer';
 import NebulaShader from '@/components/canvas/NebulaShader';
-import StarDust from '@/components/canvas/StarDust';
 import { Zap, DollarSign, Clock, Sparkles, LucideIcon, Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 
@@ -167,7 +166,6 @@ export default function AboutPage() {
         <Canvas camera={{ position: [0, 0, 5], fov: 75 }}>
           <Suspense fallback={null}>
             <NebulaShader />
-            <StarDust />
           </Suspense>
         </Canvas>
       </div>
