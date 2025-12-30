@@ -58,9 +58,9 @@ const Navbar: React.FC = () => {
 
   return (
     <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${scrolled
-          ? 'bg-[#201c19]/80 backdrop-blur-md border-[#f4cf8b]/10 py-4'
-          : 'bg-transparent border-transparent py-6'
+      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${scrolled
+          ? 'bg-[#040303]/80 backdrop-blur-md py-4'
+          : 'bg-transparent py-6'
         }`}
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
@@ -119,7 +119,7 @@ const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <nav
           id="mobile-menu"
-          className="sm:hidden absolute top-full left-0 right-0 bg-[#201c19] border-b border-[#f4cf8b]/10 p-6 flex flex-col gap-4"
+          className="sm:hidden absolute top-full left-0 right-0 bg-[#040303] border-b border-[#f4cf8b]/10 p-6 flex flex-col gap-4"
           aria-label="Mobile navigation"
         >
           {t.links.map((link: NavLink) => (
