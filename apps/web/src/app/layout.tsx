@@ -1,4 +1,5 @@
 import "./globals.css";
+import { Analytics } from "@vercel/analytics/react";
 import { Toaster } from "sonner";
 import {
   SoftwareApplicationSchema,
@@ -19,6 +20,7 @@ export default function RootLayout({
       <body className="min-h-screen antialiased">
         {children}
         <Toaster position="bottom-right" />
+        <Analytics />
       </body>
     </html>
   );
