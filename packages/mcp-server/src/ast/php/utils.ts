@@ -3,6 +3,13 @@
  *
  * Helper functions for converting Tree-sitter nodes to CodeElements
  * and extracting PHP-specific constructs.
+ *
+ * Supports PHP 8.0+ features:
+ * - Attributes (PHP 8.0)
+ * - Enums (PHP 8.1)
+ * - Readonly properties/classes (PHP 8.1/8.2)
+ * - Property hooks (PHP 8.4)
+ * - Asymmetric visibility (PHP 8.4)
  */
 
 import type Parser from "web-tree-sitter";
@@ -103,6 +110,144 @@ export function isStatic(node: Node): boolean {
 }
 
 /**
+ * Check if a node has readonly modifier (PHP 8.1+)
+ */
+export function isReadonly(node: Node): boolean {
+  for (const child of node.children) {
+    if (child.type === "readonly_modifier") {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a node has final modifier
+ */
+export function isFinal(node: Node): boolean {
+  for (const child of node.children) {
+    if (child.type === "final_modifier") {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Check if a node has abstract modifier
+ */
+export function isAbstract(node: Node): boolean {
+  for (const child of node.children) {
+    if (child.type === "abstract_modifier") {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
+ * Extract asymmetric visibility (PHP 8.4)
+ * Returns { get: visibility, set: visibility } for properties with different read/write access
+ */
+export function getAsymmetricVisibility(node: Node): { get?: string; set?: string } | undefined {
+  const visibilities: { get?: string; set?: string } = {};
+  let foundAsymmetric = false;
+
+  for (const child of node.children) {
+    if (child.type === "visibility_modifier") {
+      const text = child.text;
+      // Check for asymmetric syntax like "public private(set)"
+      const setMatch = text.match(/private\(set\)|protected\(set\)/);
+      if (setMatch) {
+        visibilities.set = setMatch[0].replace("(set)", "");
+        foundAsymmetric = true;
+      }
+    }
+  }
+
+  // Also check the full node text for asymmetric patterns
+  const nodeText = node.text;
+  const asymmetricMatch = nodeText.match(/(public|protected|private)\s+(private|protected)\(set\)/);
+  if (asymmetricMatch) {
+    visibilities.get = asymmetricMatch[1];
+    visibilities.set = asymmetricMatch[2];
+    foundAsymmetric = true;
+  }
+
+  return foundAsymmetric ? visibilities : undefined;
+}
+
+/**
+ * Extract attributes from a node (PHP 8.0+)
+ * Returns array of attribute names
+ */
+export function getAttributes(node: Node): string[] {
+  const attributes: string[] = [];
+
+  for (const child of node.children) {
+    if (child.type === "attribute_list" || child.type === "attribute_group") {
+      // Extract attribute names from the attribute list
+      const attrText = child.text;
+      // Match attribute names like #[Route("/api")] or #[Deprecated]
+      const matches = attrText.matchAll(/#\[([^\]]+)\]/g);
+      for (const match of matches) {
+        const attrContent = match[1];
+        if (attrContent) {
+          // Extract the attribute name (before any parentheses)
+          const attrName = attrContent.split("(")[0]?.trim();
+          if (attrName) {
+            attributes.push(attrName);
+          }
+        }
+      }
+    }
+  }
+
+  return attributes;
+}
+
+/**
+ * Check if a property has hooks (PHP 8.4)
+ */
+export function hasPropertyHooks(node: Node): boolean {
+  for (const child of node.namedChildren) {
+    if (child.type === "property_hook_list" || child.type === "property_hook") {
+      return true;
+    }
+  }
+  // Also check text for hook syntax { get; set; } or { get { } set { } }
+  return node.text.includes("{ get") || node.text.includes("{get");
+}
+
+/**
+ * Extract property hooks information (PHP 8.4)
+ */
+export function getPropertyHooks(node: Node): { get?: boolean; set?: boolean } | undefined {
+  const hooks: { get?: boolean; set?: boolean } = {};
+
+  for (const child of node.namedChildren) {
+    if (child.type === "property_hook_list") {
+      for (const hookChild of child.namedChildren) {
+        if (hookChild.type === "property_hook") {
+          const nameNode = hookChild.childForFieldName("name");
+          if (nameNode?.text === "get") hooks.get = true;
+          if (nameNode?.text === "set") hooks.set = true;
+        }
+      }
+    }
+  }
+
+  // Fallback: parse from text
+  if (!hooks.get && !hooks.set) {
+    const text = node.text;
+    if (text.includes("get")) hooks.get = true;
+    if (text.includes("set")) hooks.set = true;
+  }
+
+  return hooks.get || hooks.set ? hooks : undefined;
+}
+
+/**
  * Get function signature from a function_definition node
  */
 export function getFunctionSignature(node: Node): string {
@@ -173,6 +318,131 @@ export function getTraitSignature(node: Node): string {
   const nameNode = node.childForFieldName("name");
   const name = nameNode?.text ?? "unknown";
   return `trait ${name}`;
+}
+
+/**
+ * Get enum signature (PHP 8.1+)
+ */
+export function getEnumSignature(node: Node): string {
+  const nameNode = node.childForFieldName("name");
+  const name = nameNode?.text ?? "unknown";
+
+  // Check for backed enum type (string or int)
+  let backedType = "";
+  for (const child of node.children) {
+    if (child.type === ":") {
+      const nextSibling = child.nextSibling;
+      if (nextSibling && (nextSibling.text === "string" || nextSibling.text === "int")) {
+        backedType = `: ${nextSibling.text}`;
+      }
+    }
+  }
+
+  return `enum ${name}${backedType}`;
+}
+
+/**
+ * Get property signature with full details (PHP 8.0+)
+ * Includes type, visibility, readonly, hooks
+ */
+export function getPropertySignature(node: Node): string {
+  const parts: string[] = [];
+
+  // Visibility
+  const visibility = getVisibility(node);
+  if (visibility) {
+    parts.push(visibility);
+  }
+
+  // Asymmetric visibility (PHP 8.4)
+  const asymmetric = getAsymmetricVisibility(node);
+  if (asymmetric?.set) {
+    parts.push(`${asymmetric.set}(set)`);
+  }
+
+  // Static
+  if (isStatic(node)) {
+    parts.push("static");
+  }
+
+  // Readonly
+  if (isReadonly(node)) {
+    parts.push("readonly");
+  }
+
+  // Type
+  const typeNode = node.childForFieldName("type");
+  if (typeNode) {
+    parts.push(typeNode.text);
+  }
+
+  // Property name(s)
+  const propertyNames: string[] = [];
+  for (const child of node.namedChildren) {
+    if (child.type === "property_element") {
+      const nameNode = child.childForFieldName("name");
+      if (nameNode) {
+        propertyNames.push(nameNode.text);
+      }
+    }
+  }
+
+  if (propertyNames.length > 0) {
+    parts.push(propertyNames.join(", "));
+  }
+
+  // Property hooks indicator (PHP 8.4)
+  const hooks = getPropertyHooks(node);
+  if (hooks) {
+    const hookList: string[] = [];
+    if (hooks.get) hookList.push("get");
+    if (hooks.set) hookList.push("set");
+    if (hookList.length > 0) {
+      parts.push(`{ ${hookList.join("; ")} }`);
+    }
+  }
+
+  return parts.join(" ");
+}
+
+/**
+ * Get property name from property_declaration
+ */
+export function getPropertyName(node: Node): string {
+  for (const child of node.namedChildren) {
+    if (child.type === "property_element") {
+      const nameNode = child.childForFieldName("name");
+      if (nameNode) {
+        return nameNode.text.replace(/^\$/, ""); // Remove $ prefix
+      }
+    }
+  }
+  // Fallback: extract from text
+  const match = node.text.match(/\$(\w+)/);
+  return match?.[1] ?? "unknown";
+}
+
+/**
+ * Get enum case name
+ */
+export function getEnumCaseName(node: Node): string {
+  const nameNode = node.childForFieldName("name");
+  return nameNode?.text ?? "unknown";
+}
+
+/**
+ * Get enum case signature
+ */
+export function getEnumCaseSignature(node: Node): string {
+  const name = getEnumCaseName(node);
+
+  // Check for backed value
+  const valueNode = node.childForFieldName("value");
+  if (valueNode) {
+    return `case ${name} = ${valueNode.text}`;
+  }
+
+  return `case ${name}`;
 }
 
 /**

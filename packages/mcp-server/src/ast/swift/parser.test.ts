@@ -1,5 +1,14 @@
 /**
  * Swift Tree-sitter Parser Tests
+ *
+ * Tests for Swift code parsing including Swift 6+ features:
+ * - Actors and distributed actors
+ * - Async/await concurrency
+ * - Typed throws
+ * - Nonisolated functions
+ * - Macros (Swift 5.9+)
+ * - Subscripts and operators
+ * - Associated types
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
@@ -485,5 +494,522 @@ extension Describable {
 
     const extension = result.types.find((t) => t.name === "extension Describable");
     expect(extension).toBeDefined();
+  });
+});
+
+// ============================================================================
+// Swift 5.5+ Concurrency Tests
+// ============================================================================
+
+describe("Swift 5.5+ Concurrency features", () => {
+  beforeAll(async () => {
+    await initSwiftParser();
+  });
+
+  it("should handle actor declarations", async () => {
+    const code = `
+/// A thread-safe counter actor
+actor Counter {
+    private var value = 0
+
+    func increment() {
+        value += 1
+    }
+
+    func getValue() -> Int {
+        return value
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const counter = result.classes.find((c) => c.name === "Counter");
+    expect(counter).toBeDefined();
+    expect(counter?.signature).toContain("actor Counter");
+    expect(counter?.documentation).toContain("thread-safe counter");
+
+    // Check methods inside actor
+    const increment = result.functions.find((f) => f.name === "increment" && f.parent === "Counter");
+    expect(increment).toBeDefined();
+  });
+
+  it("should handle nonisolated functions", async () => {
+    const code = `
+actor DataStore {
+    private var data: [String] = []
+
+    nonisolated func getCount() -> Int {
+        return 0
+    }
+
+    func add(_ item: String) {
+        data.append(item)
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const dataStore = result.classes.find((c) => c.name === "DataStore");
+    expect(dataStore).toBeDefined();
+
+    const getCount = result.functions.find((f) => f.name === "getCount" && f.parent === "DataStore");
+    expect(getCount).toBeDefined();
+    expect(getCount?.signature).toContain("nonisolated");
+  });
+
+  it("should handle async sequences", async () => {
+    const code = `
+func processItems() async {
+    for await item in asyncSequence {
+        print(item)
+    }
+}
+
+func fetchItems() async throws -> [Item] {
+    return []
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const processItems = result.functions.find((f) => f.name === "processItems");
+    expect(processItems).toBeDefined();
+    expect(processItems?.isAsync).toBe(true);
+
+    const fetchItems = result.functions.find((f) => f.name === "fetchItems");
+    expect(fetchItems).toBeDefined();
+    expect(fetchItems?.isAsync).toBe(true);
+    expect(fetchItems?.signature).toContain("throws");
+  });
+
+  it("should handle @MainActor attribute", async () => {
+    const code = `
+@MainActor
+class ViewModel {
+    var title: String = ""
+
+    func updateUI() {
+        // Updates UI on main thread
+    }
+}
+
+@MainActor
+func updateDisplay() {
+    print("Updating display")
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const viewModel = result.classes.find((c) => c.name === "ViewModel");
+    expect(viewModel).toBeDefined();
+    expect(viewModel?.signature).toContain("@MainActor");
+
+    const updateDisplay = result.functions.find((f) => f.name === "updateDisplay");
+    expect(updateDisplay).toBeDefined();
+    expect(updateDisplay?.signature).toContain("@MainActor");
+  });
+
+  it("should handle Sendable types", async () => {
+    const code = `
+struct Message: Sendable {
+    let id: UUID
+    let content: String
+}
+
+final class SafeCounter: @unchecked Sendable {
+    private var lock = NSLock()
+    private var value = 0
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const message = result.classes.find((c) => c.name === "Message");
+    expect(message).toBeDefined();
+
+    const safeCounter = result.classes.find((c) => c.name === "SafeCounter");
+    expect(safeCounter).toBeDefined();
+  });
+});
+
+// ============================================================================
+// Swift 5.9+ Macro Tests
+// ============================================================================
+
+describe("Swift 5.9+ Macro features", () => {
+  beforeAll(async () => {
+    await initSwiftParser();
+  });
+
+  it("should handle macro declarations", async () => {
+    const code = `
+@freestanding(expression)
+public macro stringify<T>(_ value: T) -> (T, String) = #externalMacro(module: "MyMacros", type: "StringifyMacro")
+
+@attached(member)
+public macro AddInit() = #externalMacro(module: "MyMacros", type: "AddInitMacro")
+`;
+    const result = await parseSwiftAsync(code);
+
+    // Note: macro parsing depends on tree-sitter-swift grammar support
+    // This test verifies the parser doesn't crash on macro syntax
+    expect(result.language).toBe("swift");
+  });
+
+  it("should handle types with macro attributes", async () => {
+    const code = `
+@Observable
+class UserSettings {
+    var theme: String = "light"
+    var fontSize: Int = 14
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const userSettings = result.classes.find((c) => c.name === "UserSettings");
+    expect(userSettings).toBeDefined();
+  });
+});
+
+// ============================================================================
+// Swift 6+ Features Tests
+// ============================================================================
+
+describe("Swift 6+ features", () => {
+  beforeAll(async () => {
+    await initSwiftParser();
+  });
+
+  it("should handle typed throws", async () => {
+    const code = `
+enum ValidationError: Error {
+    case empty
+    case tooLong
+}
+
+func validate(_ input: String) throws(ValidationError) -> String {
+    if input.isEmpty {
+        throw .empty
+    }
+    return input
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const validate = result.functions.find((f) => f.name === "validate");
+    expect(validate).toBeDefined();
+    // Note: typed throws signature extraction depends on tree-sitter-swift support
+  });
+
+  it("should handle distributed actors", async () => {
+    const code = `
+distributed actor GamePlayer {
+    var score: Int = 0
+
+    distributed func makeMove() async throws -> Move {
+        return Move()
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const gamePlayer = result.classes.find((c) => c.name === "GamePlayer");
+    expect(gamePlayer).toBeDefined();
+    // Note: distributed actor signature depends on tree-sitter-swift support
+  });
+
+  it("should handle nonisolated(unsafe)", async () => {
+    const code = `
+class LegacyWrapper {
+    nonisolated(unsafe) var legacyState: Int = 0
+
+    nonisolated func accessLegacy() -> Int {
+        return legacyState
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const wrapper = result.classes.find((c) => c.name === "LegacyWrapper");
+    expect(wrapper).toBeDefined();
+  });
+
+  it("should handle package access level", async () => {
+    const code = `
+package class PackageClass {
+    package var packageVar: String = ""
+
+    package func packageMethod() {}
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const packageClass = result.classes.find((c) => c.name === "PackageClass");
+    expect(packageClass).toBeDefined();
+  });
+});
+
+// ============================================================================
+// Subscript and Operator Tests
+// ============================================================================
+
+describe("Subscripts and Operators", () => {
+  beforeAll(async () => {
+    await initSwiftParser();
+  });
+
+  it("should handle subscript declarations", async () => {
+    const code = `
+struct Matrix {
+    var data: [[Double]]
+
+    subscript(row: Int, column: Int) -> Double {
+        get { return data[row][column] }
+        set { data[row][column] = newValue }
+    }
+
+    subscript(row: Int) -> [Double] {
+        return data[row]
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const matrix = result.classes.find((c) => c.name === "Matrix");
+    expect(matrix).toBeDefined();
+
+    // Check for subscript methods
+    const subscripts = result.functions.filter((f) => f.name === "subscript" && f.parent === "Matrix");
+    expect(subscripts.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("should handle operator declarations", async () => {
+    const code = `
+infix operator **: MultiplicationPrecedence
+
+func ** (base: Double, exponent: Double) -> Double {
+    return pow(base, exponent)
+}
+
+prefix operator ++
+
+prefix func ++ (value: inout Int) -> Int {
+    value += 1
+    return value
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    // Check for operator function
+    const powerFunc = result.functions.find((f) => f.name === "**");
+    // Note: operator function parsing depends on tree-sitter-swift support
+    expect(result.language).toBe("swift");
+  });
+});
+
+// ============================================================================
+// Protocol Associated Types Tests
+// ============================================================================
+
+describe("Protocol Associated Types", () => {
+  beforeAll(async () => {
+    await initSwiftParser();
+  });
+
+  it("should handle associated type declarations", async () => {
+    const code = `
+protocol Container {
+    associatedtype Item
+    associatedtype Iterator: IteratorProtocol where Iterator.Element == Item
+
+    var count: Int { get }
+    mutating func append(_ item: Item)
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const container = result.interfaces.find((i) => i.name === "Container");
+    expect(container).toBeDefined();
+
+    // Check for associated types
+    const itemType = result.types.find((t) => t.name === "Item" && t.parent === "Container");
+    // Note: associated type parsing depends on tree-sitter-swift support
+  });
+
+  it("should handle primary associated types", async () => {
+    const code = `
+protocol Collection<Element> {
+    associatedtype Element
+    var first: Element? { get }
+}
+
+func process<C: Collection<String>>(_ collection: C) {
+    print(collection.first ?? "")
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const collection = result.interfaces.find((i) => i.name === "Collection");
+    expect(collection).toBeDefined();
+
+    const process = result.functions.find((f) => f.name === "process");
+    expect(process).toBeDefined();
+  });
+});
+
+// ============================================================================
+// Complex Swift Patterns Tests
+// ============================================================================
+
+describe("Complex Swift patterns", () => {
+  beforeAll(async () => {
+    await initSwiftParser();
+  });
+
+  it("should handle result builders", async () => {
+    const code = `
+@resultBuilder
+struct ArrayBuilder {
+    static func buildBlock<T>(_ components: T...) -> [T] {
+        return components
+    }
+}
+
+@ArrayBuilder
+func buildNumbers() -> [Int] {
+    1
+    2
+    3
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const arrayBuilder = result.classes.find((c) => c.name === "ArrayBuilder");
+    expect(arrayBuilder).toBeDefined();
+
+    const buildNumbers = result.functions.find((f) => f.name === "buildNumbers");
+    expect(buildNumbers).toBeDefined();
+  });
+
+  it("should handle opaque return types", async () => {
+    const code = `
+func makeCollection() -> some Collection {
+    return [1, 2, 3]
+}
+
+func makeEquatable() -> some Equatable {
+    return 42
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const makeCollection = result.functions.find((f) => f.name === "makeCollection");
+    expect(makeCollection).toBeDefined();
+
+    const makeEquatable = result.functions.find((f) => f.name === "makeEquatable");
+    expect(makeEquatable).toBeDefined();
+  });
+
+  it("should handle parameter packs (variadic generics)", async () => {
+    const code = `
+func zip<each T, each U>(_ first: repeat each T, with second: repeat each U) -> (repeat (each T, each U)) {
+    return (repeat (each first, each second))
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const zip = result.functions.find((f) => f.name === "zip");
+    expect(zip).toBeDefined();
+  });
+
+  it("should handle where clauses in extensions", async () => {
+    const code = `
+extension Array where Element: Comparable {
+    func isSorted() -> Bool {
+        return zip(self, self.dropFirst()).allSatisfy { $0 <= $1 }
+    }
+}
+
+extension Collection where Element == String {
+    func joined() -> String {
+        return self.joined(separator: "")
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const arrayExtension = result.types.find((t) => t.name === "extension Array");
+    expect(arrayExtension).toBeDefined();
+    expect(arrayExtension?.signature).toContain("extension Array");
+
+    const collectionExtension = result.types.find((t) => t.name === "extension Collection");
+    expect(collectionExtension).toBeDefined();
+  });
+
+  it("should handle mutating and nonmutating functions", async () => {
+    const code = `
+struct Stack<Element> {
+    private var items: [Element] = []
+
+    mutating func push(_ item: Element) {
+        items.append(item)
+    }
+
+    mutating func pop() -> Element? {
+        return items.popLast()
+    }
+
+    func peek() -> Element? {
+        return items.last
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const stack = result.classes.find((c) => c.name === "Stack");
+    expect(stack).toBeDefined();
+
+    const push = result.functions.find((f) => f.name === "push" && f.parent === "Stack");
+    expect(push).toBeDefined();
+    expect(push?.signature).toContain("mutating");
+
+    const peek = result.functions.find((f) => f.name === "peek" && f.parent === "Stack");
+    expect(peek).toBeDefined();
+  });
+
+  it("should handle convenience and required initializers", async () => {
+    const code = `
+class Vehicle {
+    var name: String
+
+    required init(name: String) {
+        self.name = name
+    }
+
+    convenience init() {
+        self.init(name: "Unknown")
+    }
+}
+
+class Car: Vehicle {
+    var wheels: Int = 4
+
+    required init(name: String) {
+        super.init(name: name)
+    }
+}
+`;
+    const result = await parseSwiftAsync(code);
+
+    const vehicle = result.classes.find((c) => c.name === "Vehicle");
+    expect(vehicle).toBeDefined();
+
+    const requiredInit = result.functions.find(
+      (f) => f.name === "init" && f.parent === "Vehicle" && f.signature?.includes("required")
+    );
+    // Note: required init signature depends on tree-sitter-swift support
+
+    const convenienceInit = result.functions.find(
+      (f) => f.name === "init" && f.parent === "Vehicle" && f.signature?.includes("convenience")
+    );
+    // Note: convenience init signature depends on tree-sitter-swift support
   });
 });

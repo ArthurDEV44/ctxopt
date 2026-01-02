@@ -28,8 +28,14 @@ import {
   getFunctionSignature,
   getMethodSignature,
   getTypeSignature,
+  getStructSignatureWithFields,
+  getInterfaceSignatureWithMethods,
   isExported,
+  isGeneric,
   getReceiverType,
+  getConstSignature,
+  getVarSignature,
+  isConstraintInterface,
   createCodeElement,
   getImportPath,
   getImportName,
@@ -258,35 +264,62 @@ function processImportSpec(node: Node, structure: FileStructure): void {
 
 /**
  * Process a type spec (struct, interface, alias)
+ * Supports Go 1.18+ generics
  */
 function processTypeSpec(node: Node, structure: FileStructure, lines: string[]): void {
   const nameNode = node.childForFieldName("name");
   const typeNode = node.childForFieldName("type");
   const name = nameNode?.text ?? "unknown";
+  const generic = isGeneric(node);
 
   if (!typeNode) return;
 
   if (typeNode.type === "struct_type") {
+    // Use enhanced struct signature with field summary
+    const signature = getStructSignatureWithFields(node);
+
     structure.classes.push(
       createCodeElement("class", name, node, {
-        signature: getTypeSignature(node, "struct"),
+        signature,
         documentation: extractGoDoc(node.parent ?? node, lines),
         isExported: isExported(name),
+        isAsync: generic, // Reuse isAsync to indicate generic type
       })
     );
   } else if (typeNode.type === "interface_type") {
-    structure.interfaces.push(
-      createCodeElement("interface", name, node, {
-        signature: getTypeSignature(node, "interface"),
-        documentation: extractGoDoc(node.parent ?? node, lines),
-        isExported: isExported(name),
-      })
-    );
+    // Check if it's a type constraint interface (Go 1.18+)
+    const isConstraint = isConstraintInterface(node);
+
+    // Use enhanced interface signature with method summary
+    const signature = getInterfaceSignatureWithMethods(node);
+
+    if (isConstraint) {
+      // Type constraints are treated as types rather than interfaces
+      structure.types.push(
+        createCodeElement("type", name, node, {
+          signature,
+          documentation: extractGoDoc(node.parent ?? node, lines),
+          isExported: isExported(name),
+        })
+      );
+    } else {
+      structure.interfaces.push(
+        createCodeElement("interface", name, node, {
+          signature,
+          documentation: extractGoDoc(node.parent ?? node, lines),
+          isExported: isExported(name),
+          isAsync: generic, // Reuse isAsync to indicate generic type
+        })
+      );
+    }
   } else {
-    // Type alias
+    // Type alias or definition
+    const typeParams = node.childForFieldName("type_parameters");
+    const typeParamsStr = typeParams ? typeParams.text : "";
+
     structure.types.push(
       createCodeElement("type", name, node, {
-        signature: `type ${name} ${typeNode.text}`,
+        signature: `type ${name}${typeParamsStr} ${typeNode.text}`,
         documentation: extractGoDoc(node.parent ?? node, lines),
         isExported: isExported(name),
       })

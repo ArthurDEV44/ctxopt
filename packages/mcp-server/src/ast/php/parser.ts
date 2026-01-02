@@ -26,15 +26,23 @@ import { createEmptyStructure } from "../types.js";
 import {
   extractPhpDoc,
   isPublic,
+  isReadonly,
   getFunctionSignature,
   getMethodSignature,
   getClassSignature,
   getInterfaceSignature,
   getTraitSignature,
+  getEnumSignature,
+  getEnumCaseName,
+  getEnumCaseSignature,
+  getPropertySignature,
+  getPropertyName,
   getUsePath,
   getUseShortName,
   getConstSignature,
   getConstName,
+  getAttributes,
+  hasPropertyHooks,
   createCodeElement,
 } from "./utils.js";
 
@@ -165,16 +173,27 @@ function walkNode(
     case "class_declaration": {
       const nameNode = node.childForFieldName("name");
       const name = nameNode?.text ?? "unknown";
+      const attributes = getAttributes(node);
+      const readonly = isReadonly(node);
+
+      // Build enhanced signature
+      let signature = getClassSignature(node);
+      if (readonly) {
+        signature = signature.replace("class", "readonly class");
+      }
+      if (attributes.length > 0) {
+        signature = `#[${attributes.join(", ")}] ${signature}`;
+      }
 
       structure.classes.push(
         createCodeElement("class", name, node, {
-          signature: getClassSignature(node),
+          signature,
           documentation: extractPhpDoc(node, lines),
           isExported: true,
         })
       );
 
-      // Walk into class body for methods
+      // Walk into class body for methods and properties
       const body = node.childForFieldName("body");
       if (body) {
         for (const child of body.children) {
@@ -229,6 +248,51 @@ function walkNode(
       return;
     }
 
+    case "enum_declaration": {
+      // PHP 8.1+ enums
+      const nameNode = node.childForFieldName("name");
+      const name = nameNode?.text ?? "unknown";
+      const attributes = getAttributes(node);
+
+      let signature = getEnumSignature(node);
+      if (attributes.length > 0) {
+        signature = `#[${attributes.join(", ")}] ${signature}`;
+      }
+
+      // Enums are stored as types (similar to TypeScript enums)
+      structure.types.push(
+        createCodeElement("type", name, node, {
+          signature,
+          documentation: extractPhpDoc(node, lines),
+          isExported: true,
+        })
+      );
+
+      // Walk into enum body for cases and methods
+      const body = node.childForFieldName("body");
+      if (body) {
+        for (const child of body.children) {
+          walkNode(child, structure, lines, name);
+        }
+      }
+      return;
+    }
+
+    case "enum_case": {
+      // PHP 8.1+ enum cases
+      const name = getEnumCaseName(node);
+
+      structure.variables.push(
+        createCodeElement("variable", name, node, {
+          signature: getEnumCaseSignature(node),
+          documentation: extractPhpDoc(node, lines),
+          isExported: true,
+          parent: currentClassName,
+        })
+      );
+      return;
+    }
+
     case "method_declaration": {
       const nameNode = node.childForFieldName("name");
       const name = nameNode?.text ?? "unknown";
@@ -256,6 +320,49 @@ function walkNode(
           parent: currentClassName,
         })
       );
+      return;
+    }
+
+    case "property_declaration": {
+      // PHP 8.0+ properties with types, readonly, hooks
+      const propName = getPropertyName(node);
+      const attributes = getAttributes(node);
+      const hasHooks = hasPropertyHooks(node);
+
+      let signature = getPropertySignature(node);
+      if (attributes.length > 0) {
+        signature = `#[${attributes.join(", ")}] ${signature}`;
+      }
+
+      structure.variables.push(
+        createCodeElement("variable", propName, node, {
+          signature,
+          documentation: extractPhpDoc(node, lines),
+          isExported: isPublic(node),
+          parent: currentClassName,
+        })
+      );
+
+      // If property has hooks, walk into them for detailed analysis
+      if (hasHooks) {
+        for (const child of node.namedChildren) {
+          if (child.type === "property_hook_list") {
+            for (const hookChild of child.namedChildren) {
+              if (hookChild.type === "property_hook") {
+                const hookNameNode = hookChild.childForFieldName("name");
+                const hookName = hookNameNode?.text ?? "unknown";
+                structure.functions.push(
+                  createCodeElement("method", `${propName}::${hookName}`, hookChild, {
+                    signature: `${hookName} hook for ${propName}`,
+                    isExported: isPublic(node),
+                    parent: currentClassName,
+                  })
+                );
+              }
+            }
+          }
+        }
+      }
       return;
     }
   }

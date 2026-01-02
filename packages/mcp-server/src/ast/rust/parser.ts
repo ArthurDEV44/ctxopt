@@ -27,17 +27,31 @@ import {
   extractRustDoc,
   hasVisibility,
   isAsyncFn,
+  isUnsafeFn,
+  isConstFn,
   getFunctionSignature,
   getStructSignature,
   getEnumSignature,
   getTraitSignature,
   getImplSignature,
   getImplTypeName,
+  getImplTraitName,
   getUsePath,
   getUseShortName,
   getConstSignature,
   getTypeAliasSignature,
+  getMacroSignature,
+  getModSignature,
+  getStaticSignature,
+  getAttributes,
+  getDerives,
   createCodeElement,
+  getParameterInfoList,
+  getGenericTypeParams,
+  getLifetimes,
+  getReturnType,
+  getDecoratorsFromAttributes,
+  isUnsafeTrait,
 } from "./utils.js";
 
 // Singleton for lazy initialization
@@ -124,25 +138,42 @@ export async function parseRustAsync(content: string): Promise<FileStructure> {
 
 /**
  * Extract file structure from parsed tree
+ * Enhanced to capture all Rust constructs including generics, lifetimes, and macros
  */
 function extractStructure(tree: Tree, content: string): FileStructure {
   const lines = content.split("\n");
   const structure = createEmptyStructure("rust", lines.length);
   const rootNode = tree.rootNode;
 
+  // Walk the tree with no initial impl context
   walkNode(rootNode, structure, lines, undefined);
 
   return structure;
 }
 
 /**
+ * Context passed when walking impl blocks
+ */
+interface ImplContext {
+  typeName: string;
+  traitName?: string;
+  implSignature: string;
+}
+
+/**
  * Recursively walk the AST and extract code elements
+ * Enhanced for tree-sitter-rust 0.24+ (2025) with full support for:
+ * - Macros (macro_rules!)
+ * - Modules (mod)
+ * - Extern crates
+ * - Full impl block context (inherent vs trait impl)
+ * - Attributes and derives
  */
 function walkNode(
   node: Node,
   structure: FileStructure,
   lines: string[],
-  currentImplType: string | undefined
+  implContext: ImplContext | undefined
 ): void {
   switch (node.type) {
     case "use_declaration": {
@@ -161,17 +192,40 @@ function walkNode(
       const nameNode = node.childForFieldName("name");
       const name = nameNode?.text ?? "unknown";
       const isAsync = isAsyncFn(node);
+      const isUnsafe = isUnsafeFn(node);
+      const isConst = isConstFn(node);
       const isExported = hasVisibility(node);
+      const attrs = getAttributes(node);
+
+      // Enhanced: Extract detailed information (2025)
+      const parameters = getParameterInfoList(node);
+      const generics = getGenericTypeParams(node);
+      const lifetimes = getLifetimes(node);
+      const returnType = getReturnType(node);
+      const decorators = getDecoratorsFromAttributes(node);
+
+      // Combine generics and lifetimes
+      const allGenerics = [...lifetimes, ...generics];
 
       // If inside an impl block, treat as method
-      if (currentImplType) {
+      if (implContext) {
         structure.functions.push(
           createCodeElement("method", name, node, {
             signature: getFunctionSignature(node),
             documentation: extractRustDoc(node, lines),
             isAsync,
             isExported,
-            parent: currentImplType,
+            parent: implContext.typeName,
+            parameters,
+            generics: allGenerics.length > 0 ? allGenerics : undefined,
+            returnType,
+            decorators: decorators.length > 0 ? decorators : undefined,
+            metadata: {
+              isUnsafe,
+              isConst,
+              implTrait: implContext.traitName,
+              attributes: attrs.map((a) => a.name),
+            },
           })
         );
       } else {
@@ -181,6 +235,15 @@ function walkNode(
             documentation: extractRustDoc(node, lines),
             isAsync,
             isExported,
+            parameters,
+            generics: allGenerics.length > 0 ? allGenerics : undefined,
+            returnType,
+            decorators: decorators.length > 0 ? decorators : undefined,
+            metadata: {
+              isUnsafe,
+              isConst,
+              attributes: attrs.map((a) => a.name),
+            },
           })
         );
       }
@@ -191,12 +254,27 @@ function walkNode(
       const nameNode = node.childForFieldName("name");
       const name = nameNode?.text ?? "unknown";
       const isExported = hasVisibility(node);
+      const derives = getDerives(node);
+      const attrs = getAttributes(node);
+
+      // Enhanced: Extract generics (2025)
+      const generics = getGenericTypeParams(node);
+      const lifetimes = getLifetimes(node);
+      const allGenerics = [...lifetimes, ...generics];
+      const decorators = getDecoratorsFromAttributes(node);
 
       structure.classes.push(
         createCodeElement("class", name, node, {
           signature: getStructSignature(node),
           documentation: extractRustDoc(node, lines),
           isExported,
+          generics: allGenerics.length > 0 ? allGenerics : undefined,
+          decorators: decorators.length > 0 ? decorators : undefined,
+          metadata: {
+            kind: "struct",
+            derives,
+            attributes: attrs.map((a) => a.name),
+          },
         })
       );
       return;
@@ -206,12 +284,27 @@ function walkNode(
       const nameNode = node.childForFieldName("name");
       const name = nameNode?.text ?? "unknown";
       const isExported = hasVisibility(node);
+      const derives = getDerives(node);
+      const attrs = getAttributes(node);
+
+      // Enhanced: Extract generics (2025)
+      const generics = getGenericTypeParams(node);
+      const lifetimes = getLifetimes(node);
+      const allGenerics = [...lifetimes, ...generics];
+      const decorators = getDecoratorsFromAttributes(node);
 
       structure.classes.push(
         createCodeElement("class", name, node, {
           signature: getEnumSignature(node),
           documentation: extractRustDoc(node, lines),
           isExported,
+          generics: allGenerics.length > 0 ? allGenerics : undefined,
+          decorators: decorators.length > 0 ? decorators : undefined,
+          metadata: {
+            kind: "enum",
+            derives,
+            attributes: attrs.map((a) => a.name),
+          },
         })
       );
       return;
@@ -221,12 +314,26 @@ function walkNode(
       const nameNode = node.childForFieldName("name");
       const name = nameNode?.text ?? "unknown";
       const isExported = hasVisibility(node);
+      const attrs = getAttributes(node);
+      const isUnsafe = isUnsafeTrait(node);
+
+      // Enhanced: Extract generics and unsafe (2025)
+      const generics = getGenericTypeParams(node);
+      const lifetimes = getLifetimes(node);
+      const allGenerics = [...lifetimes, ...generics];
+      const decorators = getDecoratorsFromAttributes(node);
 
       structure.interfaces.push(
         createCodeElement("interface", name, node, {
           signature: getTraitSignature(node),
           documentation: extractRustDoc(node, lines),
           isExported,
+          generics: allGenerics.length > 0 ? allGenerics : undefined,
+          decorators: decorators.length > 0 ? decorators : undefined,
+          metadata: {
+            isUnsafe,
+            attributes: attrs.map((a) => a.name),
+          },
         })
       );
       return;
@@ -234,12 +341,38 @@ function walkNode(
 
     case "impl_item": {
       const typeName = getImplTypeName(node);
+      const traitName = getImplTraitName(node);
+      const implSignature = getImplSignature(node);
 
-      // Walk into impl block with the type name as context
+      // Create impl context for methods
+      const newImplContext: ImplContext = {
+        typeName,
+        traitName,
+        implSignature,
+      };
+
+      // Add the impl block itself to the structure as a special element
+      // This helps track trait implementations
+      if (traitName) {
+        // Store trait implementations for reference
+        structure.interfaces.push(
+          createCodeElement("interface", `impl ${traitName} for ${typeName}`, node, {
+            signature: implSignature,
+            documentation: extractRustDoc(node, lines),
+            metadata: {
+              kind: "trait_impl",
+              forType: typeName,
+              trait: traitName,
+            },
+          })
+        );
+      }
+
+      // Walk into impl block with the context
       const body = node.childForFieldName("body");
       if (body) {
         for (const child of body.children) {
-          walkNode(child, structure, lines, typeName);
+          walkNode(child, structure, lines, newImplContext);
         }
       }
       return;
@@ -261,33 +394,123 @@ function walkNode(
     }
 
     case "const_item": {
-      if (isModuleLevel(node)) {
-        const nameNode = node.childForFieldName("name");
-        const name = nameNode?.text ?? "unknown";
-        const isExported = hasVisibility(node);
+      // Handle both module-level and impl-block constants
+      const nameNode = node.childForFieldName("name");
+      const name = nameNode?.text ?? "unknown";
+      const isExported = hasVisibility(node);
 
-        structure.variables.push(
-          createCodeElement("variable", name, node, {
-            signature: getConstSignature(node, "const"),
-            documentation: extractRustDoc(node, lines),
-            isExported,
-          })
-        );
-      }
+      structure.variables.push(
+        createCodeElement("variable", name, node, {
+          signature: getConstSignature(node, "const"),
+          documentation: extractRustDoc(node, lines),
+          isExported,
+          parent: implContext?.typeName,
+          metadata: {
+            kind: "const",
+          },
+        })
+      );
       return;
     }
 
     case "static_item": {
-      if (isModuleLevel(node)) {
+      const nameNode = node.childForFieldName("name");
+      const name = nameNode?.text ?? "unknown";
+      const isExported = hasVisibility(node);
+
+      structure.variables.push(
+        createCodeElement("variable", name, node, {
+          signature: getStaticSignature(node),
+          documentation: extractRustDoc(node, lines),
+          isExported,
+          metadata: {
+            kind: "static",
+          },
+        })
+      );
+      return;
+    }
+
+    case "macro_definition": {
+      const nameNode = node.childForFieldName("name");
+      const name = nameNode?.text ?? "unknown";
+
+      // Macros are exported if they have #[macro_export] attribute
+      const attrs = getAttributes(node);
+      const isExported = attrs.some((a) => a.name === "macro_export");
+
+      structure.functions.push(
+        createCodeElement("function", name, node, {
+          signature: getMacroSignature(node),
+          documentation: extractRustDoc(node, lines),
+          isExported,
+          metadata: {
+            kind: "macro_rules",
+            attributes: attrs.map((a) => a.name),
+          },
+        })
+      );
+      return;
+    }
+
+    case "mod_item": {
+      const nameNode = node.childForFieldName("name");
+      const name = nameNode?.text ?? "unknown";
+      const isExported = hasVisibility(node);
+      const bodyNode = node.childForFieldName("body");
+
+      // Add module as a namespace/container element
+      structure.classes.push(
+        createCodeElement("class", name, node, {
+          signature: getModSignature(node),
+          documentation: extractRustDoc(node, lines),
+          isExported,
+          metadata: {
+            kind: "module",
+            hasBody: bodyNode !== null,
+          },
+        })
+      );
+
+      // If module has inline body, walk its contents
+      if (bodyNode) {
+        for (const child of bodyNode.children) {
+          walkNode(child, structure, lines, undefined);
+        }
+      }
+      return;
+    }
+
+    case "extern_crate_declaration": {
+      const nameNode = node.childForFieldName("name");
+      const aliasNode = node.childForFieldName("alias");
+      const name = aliasNode?.text ?? nameNode?.text ?? "unknown";
+
+      structure.imports.push(
+        createCodeElement("import", name, node, {
+          signature: `extern crate ${nameNode?.text ?? "unknown"}${aliasNode ? ` as ${aliasNode.text}` : ""}`,
+          metadata: {
+            kind: "extern_crate",
+          },
+        })
+      );
+      return;
+    }
+
+    case "associated_type": {
+      // Associated types in traits or impl blocks
+      if (implContext) {
         const nameNode = node.childForFieldName("name");
         const name = nameNode?.text ?? "unknown";
-        const isExported = hasVisibility(node);
 
-        structure.variables.push(
-          createCodeElement("variable", name, node, {
-            signature: getConstSignature(node, "static"),
+        structure.types.push(
+          createCodeElement("type", name, node, {
+            signature: `type ${name}`,
             documentation: extractRustDoc(node, lines),
-            isExported,
+            parent: implContext.typeName,
+            metadata: {
+              kind: "associated_type",
+            },
           })
         );
       }
@@ -297,7 +520,7 @@ function walkNode(
 
   // Walk children
   for (const child of node.children) {
-    walkNode(child, structure, lines, currentImplType);
+    walkNode(child, structure, lines, implContext);
   }
 }
 

@@ -2,6 +2,11 @@
  * Go Tree-sitter Queries
  *
  * S-expression queries for extracting Go code elements.
+ *
+ * Supports Go 1.18+ features:
+ * - Generics (type parameters and constraints)
+ * - Type arguments in function calls
+ * - Interface type constraints
  */
 
 /**
@@ -78,6 +83,76 @@ export const TYPE_ALIAS_QUERY = `
 `;
 
 /**
+ * Query to find generic functions (Go 1.18+)
+ */
+export const GENERIC_FUNCTION_QUERY = `
+(function_declaration
+  name: (identifier) @name
+  type_parameters: (type_parameter_list) @type_params) @generic_function
+`;
+
+/**
+ * Query to find generic types (Go 1.18+)
+ */
+export const GENERIC_TYPE_QUERY = `
+(type_declaration
+  (type_spec
+    name: (type_identifier) @name
+    type_parameters: (type_parameter_list) @type_params
+    type: [
+      (struct_type) @struct
+      (interface_type) @interface
+    ])) @generic_type
+`;
+
+/**
+ * Query to find type constraints (Go 1.18+)
+ */
+export const TYPE_CONSTRAINT_QUERY = `
+(type_parameter_declaration
+  name: (identifier) @param_name
+  constraint: (_) @constraint) @type_param
+`;
+
+/**
+ * Query to find struct fields
+ */
+export const STRUCT_FIELD_QUERY = `
+(type_declaration
+  (type_spec
+    name: (type_identifier) @struct_name
+    type: (struct_type
+      (field_declaration_list
+        (field_declaration
+          name: (field_identifier)? @field_name
+          type: (_) @field_type
+          tag: (raw_string_literal)? @field_tag))))) @struct
+`;
+
+/**
+ * Query to find interface methods
+ */
+export const INTERFACE_METHOD_QUERY = `
+(type_declaration
+  (type_spec
+    name: (type_identifier) @interface_name
+    type: (interface_type
+      (method_spec
+        name: (field_identifier) @method_name
+        parameters: (parameter_list) @params
+        result: (_)? @result)))) @interface
+`;
+
+/**
+ * Query to find embedded types in structs
+ */
+export const EMBEDDED_TYPE_QUERY = `
+(field_declaration
+  type: (type_identifier) @embedded_type
+  !name) @embedded_field
+`;
+
+/**
  * Combined query for common elements
  */
 export const ALL_DEFINITIONS_QUERY = `
@@ -88,24 +163,31 @@ export const ALL_DEFINITIONS_QUERY = `
 ; Import declarations
 (import_declaration) @import_decl
 
-; Function declarations
+; Function declarations (including generic functions)
 (function_declaration
-  name: (identifier) @func_name) @function
+  name: (identifier) @func_name
+  type_parameters: (type_parameter_list)? @type_params) @function
 
 ; Method declarations
 (method_declaration
   name: (field_identifier) @method_name) @method
 
-; Type declarations
+; Type declarations (including generic types)
 (type_declaration
   (type_spec
-    name: (type_identifier) @type_name)) @type
+    name: (type_identifier) @type_name
+    type_parameters: (type_parameter_list)? @type_params)) @type
 
 ; Variable declarations
 (var_declaration) @var_decl
 
 ; Constant declarations
 (const_declaration) @const_decl
+
+; Type parameter declarations (Go 1.18+)
+(type_parameter_declaration
+  name: (identifier) @param_name
+  constraint: (_) @constraint) @type_param
 `;
 
 /**
@@ -119,5 +201,11 @@ export const QUERIES = {
   variable: VARIABLE_QUERY,
   constant: CONST_QUERY,
   typeAlias: TYPE_ALIAS_QUERY,
+  genericFunction: GENERIC_FUNCTION_QUERY,
+  genericType: GENERIC_TYPE_QUERY,
+  typeConstraint: TYPE_CONSTRAINT_QUERY,
+  structField: STRUCT_FIELD_QUERY,
+  interfaceMethod: INTERFACE_METHOD_QUERY,
+  embeddedType: EMBEDDED_TYPE_QUERY,
   all: ALL_DEFINITIONS_QUERY,
 } as const;

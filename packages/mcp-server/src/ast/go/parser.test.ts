@@ -260,6 +260,241 @@ describe("Go Tree-sitter Parser", () => {
     });
   });
 
+  describe("Go 1.18+ Generics", () => {
+    it("should parse generic functions", async () => {
+      const code = `
+package main
+
+// Map applies a function to each element
+func Map[T, U any](slice []T, fn func(T) U) []U {
+    result := make([]U, len(slice))
+    for i, v := range slice {
+        result[i] = fn(v)
+    }
+    return result
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const mapFunc = structure.functions.find((f) => f.name === "Map");
+      expect(mapFunc).toBeDefined();
+      expect(mapFunc?.signature).toContain("Map");
+      // Should include type parameters if tree-sitter supports them
+      if (mapFunc?.signature?.includes("[")) {
+        expect(mapFunc.signature).toContain("[T");
+      }
+    });
+
+    it("should parse generic structs", async () => {
+      const code = `
+package main
+
+// Container holds any value
+type Container[T any] struct {
+    Value T
+}
+
+// Pair holds two values
+type Pair[K comparable, V any] struct {
+    Key   K
+    Value V
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const containerClass = structure.classes.find((c) => c.name === "Container");
+      expect(containerClass).toBeDefined();
+
+      const pairClass = structure.classes.find((c) => c.name === "Pair");
+      expect(pairClass).toBeDefined();
+    });
+
+    it("should parse generic interfaces", async () => {
+      const code = `
+package main
+
+// Iterator is a generic iterator
+type Iterator[T any] interface {
+    Next() (T, bool)
+    Reset()
+}
+
+// Comparable for ordered types
+type Ordered interface {
+    ~int | ~int8 | ~int16 | ~int32 | ~int64 |
+    ~uint | ~uint8 | ~uint16 | ~uint32 | ~uint64 |
+    ~float32 | ~float64 | ~string
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const iteratorInterface = structure.interfaces.find((i) => i.name === "Iterator");
+      expect(iteratorInterface).toBeDefined();
+
+      // Ordered might be treated as a type constraint
+      const orderedType = structure.types.find((t) => t.name === "Ordered") ||
+                          structure.interfaces.find((i) => i.name === "Ordered");
+      expect(orderedType).toBeDefined();
+    });
+
+    it("should parse type constraints", async () => {
+      const code = `
+package main
+
+// Number is a constraint for numeric types
+type Number interface {
+    ~int | ~float64
+}
+
+// Min returns the minimum of two ordered values
+func Min[T Number](a, b T) T {
+    if a < b {
+        return a
+    }
+    return b
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const minFunc = structure.functions.find((f) => f.name === "Min");
+      expect(minFunc).toBeDefined();
+      expect(minFunc?.isExported).toBe(true);
+    });
+
+    it("should parse methods on generic types", async () => {
+      const code = `
+package main
+
+type Stack[T any] struct {
+    items []T
+}
+
+func (s *Stack[T]) Push(item T) {
+    s.items = append(s.items, item)
+}
+
+func (s *Stack[T]) Pop() (T, bool) {
+    if len(s.items) == 0 {
+        var zero T
+        return zero, false
+    }
+    item := s.items[len(s.items)-1]
+    s.items = s.items[:len(s.items)-1]
+    return item, true
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const pushMethod = structure.functions.find((f) => f.name === "Push");
+      expect(pushMethod).toBeDefined();
+      expect(pushMethod?.type).toBe("method");
+
+      const popMethod = structure.functions.find((f) => f.name === "Pop");
+      expect(popMethod).toBeDefined();
+    });
+  });
+
+  describe("Enhanced Struct Parsing", () => {
+    it("should parse struct with multiple fields", async () => {
+      const code = `
+package main
+
+type Person struct {
+    Name    string
+    Age     int
+    Email   string
+    Address string
+    Phone   string
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const personClass = structure.classes.find((c) => c.name === "Person");
+      expect(personClass).toBeDefined();
+      expect(personClass?.signature).toContain("struct");
+      // Should show field summary
+      if (personClass?.signature?.includes("{")) {
+        expect(personClass.signature).toContain("Name");
+      }
+    });
+
+    it("should parse struct with embedded types", async () => {
+      const code = `
+package main
+
+type Base struct {
+    ID int
+}
+
+type Extended struct {
+    Base
+    Name string
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const extendedClass = structure.classes.find((c) => c.name === "Extended");
+      expect(extendedClass).toBeDefined();
+    });
+
+    it("should parse struct with tags", async () => {
+      const code = `
+package main
+
+type User struct {
+    ID        int    ` + "`json:\"id\" db:\"id\"`" + `
+    Username  string ` + "`json:\"username\" validate:\"required\"`" + `
+    CreatedAt string ` + "`json:\"created_at\"`" + `
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const userClass = structure.classes.find((c) => c.name === "User");
+      expect(userClass).toBeDefined();
+    });
+  });
+
+  describe("Enhanced Interface Parsing", () => {
+    it("should parse interface with multiple methods", async () => {
+      const code = `
+package main
+
+type Repository interface {
+    Find(id int) (Entity, error)
+    FindAll() ([]Entity, error)
+    Save(entity Entity) error
+    Delete(id int) error
+    Update(entity Entity) error
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      const repoInterface = structure.interfaces.find((i) => i.name === "Repository");
+      expect(repoInterface).toBeDefined();
+      expect(repoInterface?.signature).toContain("interface");
+    });
+
+    it("should parse interface with embedded interfaces", async () => {
+      const code = `
+package main
+
+import "io"
+
+type ReadWriteCloser interface {
+    io.Reader
+    io.Writer
+    io.Closer
+}
+`;
+      const structure = await parseGoAsync(code);
+
+      // Interface might be parsed as interface or type depending on content
+      const rwcInterface = structure.interfaces.find((i) => i.name === "ReadWriteCloser") ||
+                           structure.types.find((t) => t.name === "ReadWriteCloser");
+      expect(rwcInterface).toBeDefined();
+    });
+  });
+
   describe("Edge cases", () => {
     it("should handle empty content", async () => {
       const structure = await parseGoAsync("");

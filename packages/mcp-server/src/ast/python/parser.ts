@@ -31,6 +31,10 @@ import {
   getBodyNode,
   getImportName,
   getImportSignature,
+  getDecorators,
+  getTypeParameters,
+  getReturnType,
+  getParameterInfoList,
 } from "./utils.js";
 
 // Singleton for lazy initialization
@@ -192,6 +196,7 @@ function extractStructure(tree: Tree, content: string, detailed: boolean = false
 /**
  * Recursively walk the AST and extract code elements
  * @param detailed When true, extract signature and documentation
+ * Updated 2025: Support for Python 3.10+ features (match, type aliases, generics)
  */
 function walkNode(node: Node, structure: FileStructure, lines: string[], detailed: boolean): void {
   switch (node.type) {
@@ -217,6 +222,11 @@ function walkNode(node: Node, structure: FileStructure, lines: string[], detaile
         if (detailed) {
           opts.signature = getFunctionSignature(node, isAsync);
           opts.documentation = extractDocstring(bodyNode);
+          // Enhanced: extract decorators, type parameters, return type, and parameters
+          opts.decorators = getDecorators(node);
+          opts.generics = getTypeParameters(node);
+          opts.returnType = getReturnType(node);
+          opts.parameters = getParameterInfoList(node);
         }
         structure.functions.push(
           createCodeElement("function", nameNode?.text ?? "unknown", node, opts)
@@ -232,6 +242,11 @@ function walkNode(node: Node, structure: FileStructure, lines: string[], detaile
         if (detailed) {
           opts.signature = getFunctionSignature(node, isAsync);
           opts.documentation = extractDocstring(bodyNode);
+          // Enhanced: extract decorators, type parameters, return type, and parameters
+          opts.decorators = getDecorators(node);
+          opts.generics = getTypeParameters(node);
+          opts.returnType = getReturnType(node);
+          opts.parameters = getParameterInfoList(node);
         }
         structure.functions.push(
           createCodeElement("method", nameNode?.text ?? "unknown", node, opts)
@@ -248,6 +263,9 @@ function walkNode(node: Node, structure: FileStructure, lines: string[], detaile
       if (detailed) {
         opts.signature = getClassSignature(node);
         opts.documentation = extractDocstring(bodyNode);
+        // Enhanced: extract decorators and type parameters for generic classes
+        opts.decorators = getDecorators(node);
+        opts.generics = getTypeParameters(node);
       }
       structure.classes.push(
         createCodeElement("class", nameNode?.text ?? "unknown", node, opts)
@@ -272,6 +290,11 @@ function walkNode(node: Node, structure: FileStructure, lines: string[], detaile
             const opts: Parameters<typeof createCodeElement>[3] = {};
             if (detailed) {
               opts.signature = node.text.split("\n")[0];
+              // Extract type annotation if present
+              const typeNode = assignment.childForFieldName("type");
+              if (typeNode) {
+                opts.typeAnnotation = typeNode.text;
+              }
             }
             structure.variables.push(
               createCodeElement("variable", leftNode.text, node, opts)
@@ -282,8 +305,47 @@ function walkNode(node: Node, structure: FileStructure, lines: string[], detaile
       break;
     }
 
+    case "type_alias_statement": {
+      // Python 3.12+ type alias: type Alias = SomeType
+      // Structure: type_alias_statement -> [type (name), type (value)]
+      if (isModuleLevel(node)) {
+        // The first 'type' child is the name, the second is the value
+        const typeChildren = node.namedChildren.filter((c) => c.type === "type");
+        const nameTypeNode = typeChildren[0];
+        const valueTypeNode = typeChildren[1];
+
+        // Extract the actual identifier from the name type node
+        let typeName = "unknown";
+        if (nameTypeNode) {
+          const identifierNode = nameTypeNode.firstNamedChild;
+          if (identifierNode?.type === "identifier") {
+            typeName = identifierNode.text;
+          } else {
+            typeName = nameTypeNode.text;
+          }
+        }
+
+        const typeParamsNode = node.childForFieldName("type_parameters");
+
+        const opts: Parameters<typeof createCodeElement>[3] = {};
+        if (detailed) {
+          opts.signature = node.text.split("\n")[0];
+          if (typeParamsNode) {
+            opts.generics = [typeParamsNode.text];
+          }
+          if (valueTypeNode) {
+            opts.typeAnnotation = valueTypeNode.text;
+          }
+        }
+        structure.types.push(
+          createCodeElement("type", typeName, node, opts)
+        );
+      }
+      break;
+    }
+
     case "decorated_definition": {
-      // Let the child function/class handle itself
+      // Extract decorators and pass to child function/class
       for (const child of node.children) {
         walkNode(child, structure, lines, detailed);
       }

@@ -8,6 +8,12 @@ import {
   parsePythonAsync,
   initPythonParser,
 } from "./parser.js";
+import {
+  getDecorators,
+  getTypeParameters,
+  getReturnType,
+  getParameterInfoList,
+} from "./utils.js";
 
 // Sample Python code for testing
 const SAMPLE_PYTHON = `
@@ -233,6 +239,231 @@ async def multi_decorated():
       const funcNames = structure.functions.map((f) => f.name);
       expect(funcNames).toContain("decorated_func");
       expect(funcNames).toContain("multi_decorated");
+    });
+  });
+
+  // Python 3.10+ Feature Tests
+  describe("Python 3.10+ Features", () => {
+    describe("Type Aliases (Python 3.12+)", () => {
+      it("should parse type alias statements", async () => {
+        const code = `
+type Vector = list[float]
+type Matrix = list[list[float]]
+type Callback[T] = Callable[[T], None]
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        expect(structure.types.length).toBeGreaterThanOrEqual(2);
+        const typeNames = structure.types.map((t) => t.name);
+        expect(typeNames).toContain("Vector");
+        expect(typeNames).toContain("Matrix");
+      });
+
+      it("should extract type alias value", async () => {
+        const code = `type IntList = list[int]`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        const intList = structure.types.find((t) => t.name === "IntList");
+        expect(intList).toBeDefined();
+        expect(intList?.typeAnnotation).toBe("list[int]");
+      });
+    });
+
+    describe("Enhanced Decorator Extraction", () => {
+      it("should extract decorators with arguments", async () => {
+        const code = `
+@dataclass(frozen=True)
+class ImmutableData:
+    value: int
+
+@app.route("/api/users")
+def get_users():
+    pass
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+
+        const immutableData = structure.classes.find((c) => c.name === "ImmutableData");
+        expect(immutableData?.decorators).toBeDefined();
+        expect(immutableData?.decorators?.some((d) => d.includes("dataclass"))).toBe(true);
+      });
+
+      it("should extract multiple decorators", async () => {
+        const code = `
+@staticmethod
+@lru_cache(maxsize=128)
+def cached_static():
+    pass
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        const func = structure.functions.find((f) => f.name === "cached_static");
+        expect(func?.decorators?.length).toBeGreaterThanOrEqual(2);
+      });
+    });
+
+    describe("Parameter Extraction", () => {
+      it("should extract typed parameters", async () => {
+        const code = `
+def process(name: str, count: int, items: list[str]) -> None:
+    pass
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        const func = structure.functions.find((f) => f.name === "process");
+
+        expect(func?.parameters).toBeDefined();
+        expect(func?.parameters?.length).toBe(3);
+
+        const nameParam = func?.parameters?.find((p) => p.name === "name");
+        expect(nameParam?.type).toBe("str");
+
+        const countParam = func?.parameters?.find((p) => p.name === "count");
+        expect(countParam?.type).toBe("int");
+      });
+
+      it("should extract default parameters", async () => {
+        const code = `
+def greet(name: str = "World", verbose: bool = False) -> str:
+    return f"Hello, {name}!"
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        const func = structure.functions.find((f) => f.name === "greet");
+
+        const nameParam = func?.parameters?.find((p) => p.name === "name");
+        expect(nameParam?.type).toBe("str");
+        expect(nameParam?.defaultValue).toBe('"World"');
+        expect(nameParam?.isOptional).toBe(true);
+      });
+
+      it("should extract *args and **kwargs", async () => {
+        const code = `
+def flexible(*args, **kwargs) -> None:
+    pass
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        const func = structure.functions.find((f) => f.name === "flexible");
+
+        expect(func?.parameters).toBeDefined();
+        const argsParam = func?.parameters?.find((p) => p.name === "args");
+        expect(argsParam?.isRest).toBe(true);
+
+        const kwargsParam = func?.parameters?.find((p) => p.name === "kwargs");
+        expect(kwargsParam?.isRest).toBe(true);
+      });
+    });
+
+    describe("Return Type Extraction", () => {
+      it("should extract simple return types", async () => {
+        const code = `
+def get_count() -> int:
+    return 42
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+        const func = structure.functions.find((f) => f.name === "get_count");
+        expect(func?.returnType).toBe("int");
+      });
+
+      it("should extract complex return types", async () => {
+        const code = `
+def get_mapping() -> dict[str, list[int]]:
+    return {}
+
+async def fetch_data() -> tuple[str, int, bool]:
+    return ("", 0, False)
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+
+        const getMapping = structure.functions.find((f) => f.name === "get_mapping");
+        expect(getMapping?.returnType).toBe("dict[str, list[int]]");
+
+        const fetchData = structure.functions.find((f) => f.name === "fetch_data");
+        expect(fetchData?.returnType).toBe("tuple[str, int, bool]");
+        expect(fetchData?.isAsync).toBe(true);
+      });
+    });
+
+    describe("Async Features", () => {
+      it("should correctly identify async methods", async () => {
+        const code = `
+class AsyncService:
+    async def fetch(self) -> dict:
+        pass
+
+    def sync_method(self) -> None:
+        pass
+
+    async def process(self, data: str) -> bool:
+        pass
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+
+        const fetchMethod = structure.functions.find((f) => f.name === "fetch");
+        expect(fetchMethod?.isAsync).toBe(true);
+
+        const syncMethod = structure.functions.find((f) => f.name === "sync_method");
+        expect(syncMethod?.isAsync).toBeFalsy();
+
+        const processMethod = structure.functions.find((f) => f.name === "process");
+        expect(processMethod?.isAsync).toBe(true);
+        expect(processMethod?.parent).toBe("AsyncService");
+      });
+    });
+
+    describe("Variable Type Annotations", () => {
+      it("should extract variable type annotations", async () => {
+        const code = `
+count: int = 0
+name: str = "test"
+items: list[str] = []
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+
+        expect(structure.variables.length).toBeGreaterThanOrEqual(3);
+        const varNames = structure.variables.map((v) => v.name);
+        expect(varNames).toContain("count");
+        expect(varNames).toContain("name");
+        expect(varNames).toContain("items");
+      });
+    });
+
+    describe("Generic Functions and Classes (Python 3.12+)", () => {
+      it("should parse generic function type parameters", async () => {
+        const code = `
+def first[T](items: list[T]) -> T:
+    return items[0]
+
+def pair[K, V](key: K, value: V) -> tuple[K, V]:
+    return (key, value)
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+
+        const firstFunc = structure.functions.find((f) => f.name === "first");
+        expect(firstFunc?.generics).toBeDefined();
+        expect(firstFunc?.generics).toContain("T");
+
+        const pairFunc = structure.functions.find((f) => f.name === "pair");
+        expect(pairFunc?.generics).toBeDefined();
+        expect(pairFunc?.generics?.length).toBe(2);
+      });
+
+      it("should parse generic class type parameters", async () => {
+        const code = `
+class Stack[T]:
+    def __init__(self) -> None:
+        self._items: list[T] = []
+
+    def push(self, item: T) -> None:
+        self._items.append(item)
+
+class Mapping[K, V]:
+    pass
+`;
+        const structure = await parsePythonAsync(code, { detailed: true });
+
+        const stackClass = structure.classes.find((c) => c.name === "Stack");
+        expect(stackClass?.generics).toBeDefined();
+        expect(stackClass?.generics).toContain("T");
+
+        const mappingClass = structure.classes.find((c) => c.name === "Mapping");
+        expect(mappingClass?.generics).toBeDefined();
+        expect(mappingClass?.generics?.length).toBe(2);
+      });
     });
   });
 });

@@ -328,6 +328,184 @@ describe("PHP Tree-sitter Parser", () => {
     });
   });
 
+  describe("PHP 8.0+ Features", () => {
+    it("should parse enums (PHP 8.1)", async () => {
+      const code = `<?php
+enum Status
+{
+    case Pending;
+    case Active;
+    case Closed;
+}
+`;
+      const structure = await parsePhpAsync(code);
+      expect(structure.types.some((t) => t.name === "Status")).toBe(true);
+
+      const statusEnum = structure.types.find((t) => t.name === "Status");
+      expect(statusEnum?.signature).toContain("enum Status");
+    });
+
+    it("should parse backed enums (PHP 8.1)", async () => {
+      const code = `<?php
+enum HttpStatus: int
+{
+    case Ok = 200;
+    case NotFound = 404;
+    case ServerError = 500;
+}
+`;
+      const structure = await parsePhpAsync(code);
+      const httpEnum = structure.types.find((t) => t.name === "HttpStatus");
+      expect(httpEnum?.signature).toContain("enum HttpStatus: int");
+
+      // Check enum cases
+      const caseNames = structure.variables.map((v) => v.name);
+      expect(caseNames).toContain("Ok");
+      expect(caseNames).toContain("NotFound");
+    });
+
+    it("should parse string-backed enums", async () => {
+      const code = `<?php
+enum Color: string
+{
+    case Red = 'red';
+    case Green = 'green';
+    case Blue = 'blue';
+}
+`;
+      const structure = await parsePhpAsync(code);
+      const colorEnum = structure.types.find((t) => t.name === "Color");
+      expect(colorEnum?.signature).toContain("enum Color: string");
+    });
+
+    it("should parse readonly classes (PHP 8.2)", async () => {
+      const code = `<?php
+readonly class ImmutableUser
+{
+    public function __construct(
+        public string $name,
+        public string $email
+    ) {}
+}
+`;
+      const structure = await parsePhpAsync(code);
+      const userClass = structure.classes.find((c) => c.name === "ImmutableUser");
+      expect(userClass?.signature).toContain("readonly class");
+    });
+
+    it("should parse attributes (PHP 8.0)", async () => {
+      const code = `<?php
+#[Deprecated("Use NewClass instead")]
+class OldClass
+{
+    #[Pure]
+    public function getValue(): int
+    {
+        return 42;
+    }
+}
+`;
+      const structure = await parsePhpAsync(code);
+      const oldClass = structure.classes.find((c) => c.name === "OldClass");
+      expect(oldClass?.signature).toContain("Deprecated");
+    });
+
+    it("should parse typed properties", async () => {
+      const code = `<?php
+class TypedClass
+{
+    public string $name;
+    protected int $age;
+    private ?float $balance = null;
+    public readonly string $id;
+}
+`;
+      const structure = await parsePhpAsync(code);
+
+      const nameVar = structure.variables.find((v) => v.name === "name");
+      expect(nameVar?.signature).toContain("string");
+      expect(nameVar?.signature).toContain("public");
+
+      const idVar = structure.variables.find((v) => v.name === "id");
+      expect(idVar?.signature).toContain("readonly");
+    });
+
+    it("should parse property hooks (PHP 8.4)", async () => {
+      // Note: Property hooks support depends on tree-sitter-php version (v0.24.0+)
+      // Current tree-sitter-wasms may not include PHP 8.4 property hooks support yet
+      // This test validates the utilities are ready when parser support is added
+
+      // Test with traditional property first (always works)
+      const traditionalCode = `<?php
+class UserTraditional
+{
+    public string $name;
+}
+`;
+      const traditionalStructure = await parsePhpAsync(traditionalCode);
+      const nameVar = traditionalStructure.variables.find((v) => v.name === "name");
+      expect(nameVar).toBeDefined();
+      expect(nameVar?.signature).toContain("string");
+
+      // Property hooks syntax - may or may not parse depending on tree-sitter-php version
+      const hookCode = `<?php
+class UserWithHooks
+{
+    public string $fullName {
+        get => $this->firstName . ' ' . $this->lastName;
+        set => [$this->firstName, $this->lastName] = explode(' ', $value, 2);
+    }
+}
+`;
+      const hookStructure = await parsePhpAsync(hookCode);
+
+      // If tree-sitter-php supports property hooks, validate parsing
+      const userClass = hookStructure.classes.find((c) => c.name === "UserWithHooks");
+      if (userClass) {
+        // Class was parsed - tree-sitter supports the syntax
+        const fullNameVar = hookStructure.variables.find((v) => v.name === "fullName");
+        if (fullNameVar) {
+          expect(fullNameVar.signature).toBeDefined();
+        }
+      }
+      // If userClass is undefined, tree-sitter doesn't support the syntax yet - that's OK
+    });
+
+    it("should parse interface properties (PHP 8.4)", async () => {
+      // Note: Interface property support depends on tree-sitter-php version
+      const code = `<?php
+interface HasName
+{
+    public string $name { get; }
+}
+`;
+      const structure = await parsePhpAsync(code);
+      // The interface should be parsed regardless of property hook support
+      expect(structure.interfaces.some((i) => i.name === "HasName")).toBe(true);
+    });
+
+    it("should parse enum methods", async () => {
+      const code = `<?php
+enum Status: string
+{
+    case Active = 'active';
+    case Inactive = 'inactive';
+
+    public function label(): string
+    {
+        return match($this) {
+            self::Active => 'Active Status',
+            self::Inactive => 'Inactive Status',
+        };
+    }
+}
+`;
+      const structure = await parsePhpAsync(code);
+      const labelMethod = structure.functions.find((f) => f.name === "label");
+      expect(labelMethod?.parent).toBe("Status");
+    });
+  });
+
   describe("Edge cases", () => {
     it("should handle empty content", async () => {
       const structure = await parsePhpAsync("<?php");

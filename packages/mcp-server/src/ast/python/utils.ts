@@ -7,7 +7,7 @@
 
 import type Parser from "web-tree-sitter";
 type Node = Parser.SyntaxNode;
-import type { CodeElement, ElementType } from "../types.js";
+import type { CodeElement, ElementType, ParameterInfo } from "../types.js";
 
 /**
  * Get line number from a Tree-sitter node (1-indexed)
@@ -99,17 +99,38 @@ export function isAsyncFunction(node: Node): boolean {
 }
 
 /**
- * Check if a definition has decorators that indicate it's exported
- * (e.g., @property, @staticmethod, @classmethod)
+ * Extract decorators from a function or class definition
+ * Returns the full decorator text including arguments
+ * Updated 2025: Better handling of complex decorators with arguments
+ *
+ * @example
+ * @decorator -> ["decorator"]
+ * @decorator(arg) -> ["decorator(arg)"]
+ * @module.decorator -> ["module.decorator"]
  */
 export function getDecorators(node: Node): string[] {
   const decorators: string[] = [];
-  let current = node.previousSibling;
 
+  // Check if parent is decorated_definition
+  const parent = node.parent;
+  if (parent?.type === "decorated_definition") {
+    for (const child of parent.children) {
+      if (child.type === "decorator") {
+        // Get the decorator content (without the @ symbol)
+        const decoratorContent = child.text.replace(/^@/, "").trim();
+        if (decoratorContent) {
+          decorators.push(decoratorContent);
+        }
+      }
+    }
+  }
+
+  // Also check previous siblings (for inline decorators)
+  let current = node.previousSibling;
   while (current && current.type === "decorator") {
-    const nameNode = current.firstNamedChild;
-    if (nameNode) {
-      decorators.unshift(nameNode.text);
+    const decoratorContent = current.text.replace(/^@/, "").trim();
+    if (decoratorContent) {
+      decorators.unshift(decoratorContent);
     }
     current = current.previousSibling;
   }
@@ -119,6 +140,7 @@ export function getDecorators(node: Node): string[] {
 
 /**
  * Create a CodeElement from a Tree-sitter node
+ * Updated 2025: Support for generics, decorators, return type, parameters, and type annotations
  */
 export function createCodeElement(
   type: ElementType,
@@ -130,19 +152,36 @@ export function createCodeElement(
     isAsync?: boolean;
     isExported?: boolean;
     parent?: string;
+    // Enhanced options (2025)
+    decorators?: string[];
+    generics?: string[];
+    returnType?: string;
+    parameters?: ParameterInfo[];
+    typeAnnotation?: string;
   }
 ): CodeElement {
-  return {
+  const element: CodeElement = {
     type,
     name,
     startLine: getLineNumber(node),
     endLine: getEndLineNumber(node),
-    signature: options?.signature,
-    documentation: options?.documentation,
-    isAsync: options?.isAsync,
-    isExported: options?.isExported,
-    parent: options?.parent,
   };
+
+  // Only add optional properties if they have values
+  if (options?.signature) element.signature = options.signature;
+  if (options?.documentation) element.documentation = options.documentation;
+  if (options?.isAsync) element.isAsync = options.isAsync;
+  if (options?.isExported) element.isExported = options.isExported;
+  if (options?.parent) element.parent = options.parent;
+
+  // Enhanced properties (2025)
+  if (options?.decorators?.length) element.decorators = options.decorators;
+  if (options?.generics?.length) element.generics = options.generics;
+  if (options?.returnType) element.returnType = options.returnType;
+  if (options?.parameters?.length) element.parameters = options.parameters;
+  if (options?.typeAnnotation) element.typeAnnotation = options.typeAnnotation;
+
+  return element;
 }
 
 /**
@@ -193,4 +232,159 @@ export function getImportName(node: Node): string {
  */
 export function getImportSignature(node: Node): string {
   return node.text.split("\n")[0] ?? node.text;
+}
+
+/**
+ * Extract type parameters from a function or class definition (Python 3.12+ PEP 695)
+ * Returns the generic type parameters as an array of strings
+ *
+ * @example
+ * def func[T](x: T) -> T: ... -> ["T"]
+ * def func[T, U](x: T, y: U) -> T: ... -> ["T", "U"]
+ * class Stack[T]: ... -> ["T"]
+ */
+export function getTypeParameters(node: Node): string[] {
+  const typeParams: string[] = [];
+
+  // Look for type_parameter node in the function/class definition
+  const typeParamsNode = node.childForFieldName("type_parameters");
+  if (typeParamsNode) {
+    // Extract individual type parameters
+    for (const child of typeParamsNode.namedChildren) {
+      if (child.type === "type" || child.type === "identifier") {
+        typeParams.push(child.text);
+      }
+    }
+
+    // If no individual params found, use the full text (minus brackets)
+    if (typeParams.length === 0 && typeParamsNode.text) {
+      const text = typeParamsNode.text.replace(/^\[|\]$/g, "").trim();
+      if (text) {
+        typeParams.push(...text.split(",").map((t) => t.trim()));
+      }
+    }
+  }
+
+  return typeParams;
+}
+
+/**
+ * Extract return type annotation from a function definition
+ *
+ * @example
+ * def func() -> int: ... -> "int"
+ * def func() -> list[str]: ... -> "list[str]"
+ * async def func() -> Awaitable[int]: ... -> "Awaitable[int]"
+ */
+export function getReturnType(node: Node): string | undefined {
+  const returnTypeNode = node.childForFieldName("return_type");
+  if (returnTypeNode) {
+    return returnTypeNode.text;
+  }
+  return undefined;
+}
+
+/**
+ * Extract detailed parameter information from a function definition
+ * Returns an array of ParameterInfo objects with name, type, default value, etc.
+ *
+ * @example
+ * def func(x: int, y: str = "default") -> None:
+ * Returns: [
+ *   { name: "x", type: "int" },
+ *   { name: "y", type: "str", defaultValue: '"default"' }
+ * ]
+ */
+export function getParameterInfoList(node: Node): ParameterInfo[] {
+  const params: ParameterInfo[] = [];
+
+  const paramsNode = node.childForFieldName("parameters");
+  if (!paramsNode) return params;
+
+  for (const child of paramsNode.namedChildren) {
+    const paramInfo: ParameterInfo = { name: "" };
+
+    switch (child.type) {
+      case "identifier":
+        // Simple parameter: x
+        paramInfo.name = child.text;
+        break;
+
+      case "typed_parameter": {
+        // Typed parameter: x: int
+        const nameNode = child.firstNamedChild;
+        const typeNode = child.childForFieldName("type");
+        if (nameNode) {
+          paramInfo.name = nameNode.text;
+        }
+        if (typeNode) {
+          paramInfo.type = typeNode.text;
+        }
+        break;
+      }
+
+      case "default_parameter": {
+        // Default parameter: x = 10
+        const nameNode = child.childForFieldName("name");
+        const valueNode = child.childForFieldName("value");
+        if (nameNode) {
+          paramInfo.name = nameNode.text;
+        }
+        if (valueNode) {
+          paramInfo.defaultValue = valueNode.text;
+          paramInfo.isOptional = true;
+        }
+        break;
+      }
+
+      case "typed_default_parameter": {
+        // Typed default parameter: x: int = 10
+        const nameNode = child.childForFieldName("name");
+        const typeNode = child.childForFieldName("type");
+        const valueNode = child.childForFieldName("value");
+        if (nameNode) {
+          paramInfo.name = nameNode.text;
+        }
+        if (typeNode) {
+          paramInfo.type = typeNode.text;
+        }
+        if (valueNode) {
+          paramInfo.defaultValue = valueNode.text;
+          paramInfo.isOptional = true;
+        }
+        break;
+      }
+
+      case "list_splat_pattern": {
+        // *args
+        const nameNode = child.firstNamedChild;
+        if (nameNode) {
+          paramInfo.name = nameNode.text;
+          paramInfo.isRest = true;
+        }
+        break;
+      }
+
+      case "dictionary_splat_pattern": {
+        // **kwargs
+        const nameNode = child.firstNamedChild;
+        if (nameNode) {
+          paramInfo.name = nameNode.text;
+          paramInfo.isRest = true;
+        }
+        break;
+      }
+
+      default:
+        // Skip separators and other non-parameter nodes
+        continue;
+    }
+
+    // Only add if we got a valid parameter name
+    if (paramInfo.name) {
+      params.push(paramInfo);
+    }
+  }
+
+  return params;
 }

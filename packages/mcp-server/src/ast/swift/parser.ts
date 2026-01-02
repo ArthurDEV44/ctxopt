@@ -2,6 +2,18 @@
  * Swift Tree-sitter Parser
  *
  * AST parser for Swift using Tree-sitter for accurate code analysis.
+ *
+ * Updated for Swift 6+ features including:
+ * - Actors and distributed actors
+ * - Async/await concurrency
+ * - Typed throws
+ * - Nonisolated functions
+ * - Macros (Swift 5.9+)
+ * - Subscripts and operators
+ * - Associated types
+ *
+ * @see https://github.com/alex-pinkus/tree-sitter-swift
+ * @see https://docs.swift.org/swift-book/
  */
 
 import Parser from "web-tree-sitter";
@@ -27,16 +39,25 @@ import {
   extractSwiftDoc,
   isPublic,
   isAsync,
+  isThrowing,
+  isNonisolated,
+  isDistributed,
   getFunctionSignature,
   getMethodSignature,
   getClassSignature,
+  getActorSignature,
   getStructSignature,
   getProtocolSignature,
   getEnumSignature,
   getExtensionSignature,
   getTypealiasSignature,
+  getMacroSignature,
+  getSubscriptSignature,
+  getOperatorSignature,
+  getAssociatedTypeSignature,
   getImportPath,
   getVariableSignature,
+  getInitSignature,
   createCodeElement,
 } from "./utils.js";
 
@@ -130,9 +151,11 @@ function extractStructure(tree: Tree, content: string): FileStructure {
 
 /**
  * Determine the actual declaration type from a class_declaration node
- * Swift tree-sitter uses class_declaration for class, struct, enum, extension
+ * Swift tree-sitter uses class_declaration for class, struct, enum, extension, actor
  */
-function getDeclarationType(node: Node): "class" | "struct" | "enum" | "extension" | "protocol" | "actor" | null {
+function getDeclarationType(
+  node: Node
+): "class" | "struct" | "enum" | "extension" | "protocol" | "actor" | null {
   for (const child of node.children) {
     switch (child.type) {
       case "class":
@@ -147,6 +170,10 @@ function getDeclarationType(node: Node): "class" | "struct" | "enum" | "extensio
         return "protocol";
       case "actor":
         return "actor";
+    }
+    // Also check text content for contextual keywords
+    if (child.text === "actor") {
+      return "actor";
     }
   }
   return null;
@@ -208,9 +235,11 @@ function walkNode(
         }
       }
       const isAsyncFunc = isAsync(node);
+      const isThrowingFunc = isThrowing(node);
+      const isNonisolatedFunc = isNonisolated(node);
 
       if (currentClassName) {
-        // Method inside a class/struct/protocol/extension
+        // Method inside a class/struct/protocol/extension/actor
         structure.functions.push(
           createCodeElement("method", name, node, {
             signature: getMethodSignature(node),
@@ -240,7 +269,7 @@ function walkNode(
 
       structure.functions.push(
         createCodeElement("method", name, node, {
-          signature: `init${node.text.match(/\([^)]*\)/)?.[0] ?? "()"}`,
+          signature: getInitSignature(node),
           documentation: extractSwiftDoc(node, lines),
           isExported: isPublic(node),
           isAsync: isAsyncFunc,
@@ -262,11 +291,118 @@ function walkNode(
       return;
     }
 
+    case "subscript_declaration": {
+      structure.functions.push(
+        createCodeElement("method", "subscript", node, {
+          signature: getSubscriptSignature(node),
+          documentation: extractSwiftDoc(node, lines),
+          isExported: isPublic(node),
+          parent: currentClassName,
+        })
+      );
+      return;
+    }
+
+    case "operator_declaration": {
+      const signature = getOperatorSignature(node);
+      // Extract operator name from signature
+      const match = signature.match(/(?:prefix|postfix|infix)?\s*operator\s+(\S+)/);
+      const name = match?.[1] ?? "operator";
+
+      structure.types.push(
+        createCodeElement("type", name, node, {
+          signature,
+          documentation: extractSwiftDoc(node, lines),
+          isExported: isPublic(node),
+        })
+      );
+      return;
+    }
+
+    case "precedence_group_declaration": {
+      let name = "unknown";
+      for (const child of node.children) {
+        if (child.type === "simple_identifier") {
+          name = child.text;
+          break;
+        }
+      }
+
+      structure.types.push(
+        createCodeElement("type", name, node, {
+          signature: `precedencegroup ${name}`,
+          documentation: extractSwiftDoc(node, lines),
+          isExported: isPublic(node),
+        })
+      );
+      return;
+    }
+
+    case "macro_declaration": {
+      let name = "unknown";
+      for (const child of node.children) {
+        if (child.type === "simple_identifier") {
+          name = child.text;
+          break;
+        }
+      }
+
+      structure.functions.push(
+        createCodeElement("function", name, node, {
+          signature: getMacroSignature(node),
+          documentation: extractSwiftDoc(node, lines),
+          isExported: isPublic(node),
+        })
+      );
+      return;
+    }
+
+    case "associatedtype_declaration": {
+      let name = "unknown";
+      for (const child of node.children) {
+        if (child.type === "type_identifier") {
+          name = child.text;
+          break;
+        }
+      }
+
+      structure.types.push(
+        createCodeElement("type", name, node, {
+          signature: getAssociatedTypeSignature(node),
+          documentation: extractSwiftDoc(node, lines),
+          isExported: true,
+          parent: currentClassName,
+        })
+      );
+      return;
+    }
+
     case "class_declaration": {
-      // Swift tree-sitter uses class_declaration for class, struct, enum, extension, protocol
+      // Swift tree-sitter uses class_declaration for class, struct, enum, extension, protocol, actor
       const declType = getDeclarationType(node);
 
-      if (declType === "class" || declType === "actor") {
+      if (declType === "actor") {
+        // Actor declaration (Swift 5.5+)
+        const name = getTypeName(node);
+        const isDistributedActor = isDistributed(node);
+
+        structure.classes.push(
+          createCodeElement("class", name, node, {
+            signature: getActorSignature(node),
+            documentation: extractSwiftDoc(node, lines),
+            isExported: isPublic(node),
+          })
+        );
+
+        // Walk into actor body for methods
+        for (const child of node.children) {
+          if (child.type === "class_body" || child.type === "enum_class_body") {
+            for (const bodyChild of child.children) {
+              walkNode(bodyChild, structure, lines, name);
+            }
+          }
+        }
+      } else if (declType === "class") {
         const name = getTypeName(node);
         structure.classes.push(
           createCodeElement("class", name, node, {
@@ -350,7 +486,11 @@ function walkNode(
 
         // Walk into protocol body for method signatures
         for (const child of node.children) {
-          if (child.type === "class_body" || child.type === "protocol_body" || child.type === "enum_class_body") {
+          if (
+            child.type === "class_body" ||
+            child.type === "protocol_body" ||
+            child.type === "enum_class_body"
+          ) {
             for (const bodyChild of child.children) {
               walkNode(bodyChild, structure, lines, name);
             }
@@ -404,6 +544,28 @@ function walkNode(
           signature: getMethodSignature(node),
           documentation: extractSwiftDoc(node, lines),
           isExported: true,
+          isAsync: isAsync(node),
+          parent: currentClassName,
+        })
+      );
+      return;
+    }
+
+    case "protocol_property_declaration": {
+      // Protocol property requirement
+      let varName = "unknown";
+      for (const child of node.children) {
+        if (child.type === "pattern") {
+          varName = child.text;
+          break;
+        }
+      }
+
+      structure.variables.push(
+        createCodeElement("variable", varName, node, {
+          signature: getVariableSignature(node),
+          documentation: extractSwiftDoc(node, lines),
+          isExported: true,
           parent: currentClassName,
         })
       );
@@ -412,7 +574,17 @@ function walkNode(
 
     case "typealias_declaration": {
       const nameNode = node.childForFieldName("name");
-      const name = nameNode?.text ?? getTypeName(node);
+      let name = nameNode?.text ?? "unknown";
+
+      // Look for type_identifier if name field not found
+      if (name === "unknown") {
+        for (const child of node.children) {
+          if (child.type === "type_identifier") {
+            name = child.text;
+            break;
+          }
+        }
+      }
 
       structure.types.push(
         createCodeElement("type", name, node, {
@@ -494,7 +666,12 @@ export async function extractSwiftElement(
   if (options.includeComments && element.documentation) {
     for (let i = element.startLine - 2; i >= 0; i--) {
       const line = lines[i]?.trim() ?? "";
-      if (line.startsWith("///") || line.startsWith("/**") || line.startsWith("*") || line.endsWith("*/")) {
+      if (
+        line.startsWith("///") ||
+        line.startsWith("/**") ||
+        line.startsWith("*") ||
+        line.endsWith("*/")
+      ) {
         startLine = i + 1;
       } else if (line === "" || line.startsWith("@")) {
         continue;
@@ -532,7 +709,10 @@ export async function extractSwiftElement(
 /**
  * Search for elements matching a query
  */
-export async function searchSwiftElements(content: string, query: string): Promise<CodeElement[]> {
+export async function searchSwiftElements(
+  content: string,
+  query: string
+): Promise<CodeElement[]> {
   const structure = await parseSwiftAsync(content);
   const queryLower = query.toLowerCase();
   const results: CodeElement[] = [];
@@ -612,7 +792,12 @@ export const swiftTreeSitterParser: LanguageParser = {
     if (options.includeComments && element.documentation) {
       for (let i = element.startLine - 2; i >= 0; i--) {
         const line = lines[i]?.trim() ?? "";
-        if (line.startsWith("///") || line.startsWith("/**") || line.startsWith("*") || line.endsWith("*/")) {
+        if (
+          line.startsWith("///") ||
+          line.startsWith("/**") ||
+          line.startsWith("*") ||
+          line.endsWith("*/")
+        ) {
           startLine = i + 1;
         } else if (line === "" || line.startsWith("@")) {
           continue;

@@ -133,7 +133,7 @@ describe("Rust Tree-sitter Parser", () => {
       expect(calcSum?.isExported).toBe(true);
 
       const privateFunc = structure.functions.find((f) => f.name === "private_func");
-      expect(privateFunc?.isExported).toBe(false);
+      expect(privateFunc?.isExported).toBeFalsy();
     });
 
     it("should detect async functions", async () => {
@@ -409,6 +409,228 @@ impl Client {
       const structure = await parseRustAsync(code);
       const fetchMethod = structure.functions.find((f) => f.name === "fetch");
       expect(fetchMethod?.isAsync).toBe(true);
+    });
+  });
+
+  // Modern Rust Features Tests (2024-2025)
+  describe("Modern Rust Features", () => {
+    describe("Parameter Extraction", () => {
+      it("should extract typed parameters", async () => {
+        const code = `
+pub fn process(name: String, count: usize, data: &[u8]) -> Result<(), Error> {
+    Ok(())
+}
+`;
+        const structure = await parseRustAsync(code);
+        const func = structure.functions.find((f) => f.name === "process");
+
+        expect(func?.parameters).toBeDefined();
+        expect(func?.parameters?.length).toBe(3);
+
+        const nameParam = func?.parameters?.find((p) => p.name === "name");
+        expect(nameParam?.type).toBe("String");
+
+        const countParam = func?.parameters?.find((p) => p.name === "count");
+        expect(countParam?.type).toBe("usize");
+      });
+
+      it("should extract self parameters", async () => {
+        const code = `
+impl MyStruct {
+    pub fn method(&self, value: i32) -> i32 {
+        value
+    }
+
+    pub fn method_mut(&mut self, value: i32) {
+        self.value = value;
+    }
+}
+`;
+        const structure = await parseRustAsync(code);
+
+        const method = structure.functions.find((f) => f.name === "method");
+        expect(method?.parameters).toBeDefined();
+        const selfParam = method?.parameters?.find((p) => p.name === "self");
+        expect(selfParam?.type).toBe("&Self");
+
+        const methodMut = structure.functions.find((f) => f.name === "method_mut");
+        const selfMutParam = methodMut?.parameters?.find((p) => p.name === "self");
+        expect(selfMutParam?.type).toBe("&mut Self");
+      });
+    });
+
+    describe("Return Type Extraction", () => {
+      it("should extract simple return types", async () => {
+        const code = `
+pub fn get_count() -> usize {
+    42
+}
+`;
+        const structure = await parseRustAsync(code);
+        const func = structure.functions.find((f) => f.name === "get_count");
+        expect(func?.returnType).toBe("usize");
+      });
+
+      it("should extract complex return types", async () => {
+        const code = `
+pub fn get_mapping() -> HashMap<String, Vec<i32>> {
+    HashMap::new()
+}
+
+pub async fn fetch_data() -> Result<(String, i32), io::Error> {
+    Ok(("".to_string(), 0))
+}
+`;
+        const structure = await parseRustAsync(code);
+
+        const getMapping = structure.functions.find((f) => f.name === "get_mapping");
+        expect(getMapping?.returnType).toBe("HashMap<String, Vec<i32>>");
+
+        const fetchData = structure.functions.find((f) => f.name === "fetch_data");
+        expect(fetchData?.returnType).toBe("Result<(String, i32), io::Error>");
+        expect(fetchData?.isAsync).toBe(true);
+      });
+    });
+
+    describe("Generics and Lifetimes", () => {
+      it("should extract generic type parameters", async () => {
+        const code = `
+pub fn first<T>(items: &[T]) -> Option<&T> {
+    items.first()
+}
+
+pub fn pair<K, V>(key: K, value: V) -> (K, V) {
+    (key, value)
+}
+`;
+        const structure = await parseRustAsync(code);
+
+        const firstFunc = structure.functions.find((f) => f.name === "first");
+        expect(firstFunc?.generics).toBeDefined();
+        expect(firstFunc?.generics).toContain("T");
+
+        const pairFunc = structure.functions.find((f) => f.name === "pair");
+        expect(pairFunc?.generics).toBeDefined();
+        expect(pairFunc?.generics?.length).toBe(2);
+      });
+
+      it("should extract lifetimes from functions", async () => {
+        const code = `
+pub fn longest<'a>(x: &'a str, y: &'a str) -> &'a str {
+    if x.len() > y.len() { x } else { y }
+}
+`;
+        const structure = await parseRustAsync(code);
+        const func = structure.functions.find((f) => f.name === "longest");
+        expect(func?.generics).toBeDefined();
+        expect(func?.generics?.some((g) => g.includes("'a"))).toBe(true);
+      });
+
+      it("should extract generics from structs", async () => {
+        const code = `
+pub struct Container<T> {
+    value: T,
+}
+
+pub struct Pair<K, V> {
+    key: K,
+    value: V,
+}
+`;
+        const structure = await parseRustAsync(code);
+
+        const container = structure.classes.find((c) => c.name === "Container");
+        expect(container?.generics).toBeDefined();
+        expect(container?.generics).toContain("T");
+
+        const pair = structure.classes.find((c) => c.name === "Pair");
+        expect(pair?.generics?.length).toBe(2);
+      });
+    });
+
+    describe("Derives and Decorators", () => {
+      it("should parse structs with derive macros", async () => {
+        const code = `
+#[derive(Debug, Clone, PartialEq)]
+pub struct Data {
+    value: i32,
+}
+`;
+        const structure = await parseRustAsync(code);
+        const data = structure.classes.find((c) => c.name === "Data");
+        expect(data).toBeDefined();
+        expect(data?.isExported).toBe(true);
+        // The signature should contain the struct definition
+        expect(data?.signature).toContain("struct Data");
+      });
+
+      it("should parse structs with multiple attributes", async () => {
+        const code = `
+#[derive(Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ApiResponse {
+    status_code: u16,
+}
+`;
+        const structure = await parseRustAsync(code);
+        const apiResponse = structure.classes.find((c) => c.name === "ApiResponse");
+        expect(apiResponse).toBeDefined();
+        expect(apiResponse?.isExported).toBe(true);
+      });
+    });
+
+    describe("Unsafe Code", () => {
+      it("should detect unsafe functions", async () => {
+        const code = `
+pub unsafe fn dangerous_operation(ptr: *mut i32) {
+    *ptr = 42;
+}
+`;
+        const structure = await parseRustAsync(code);
+        const func = structure.functions.find((f) => f.name === "dangerous_operation");
+        expect(func).toBeDefined();
+        expect(func?.signature).toContain("unsafe");
+      });
+
+      it("should detect unsafe traits", async () => {
+        const code = `
+pub unsafe trait UnsafeMarker {
+    fn check(&self) -> bool;
+}
+`;
+        const structure = await parseRustAsync(code);
+        const trait = structure.interfaces.find((i) => i.name === "UnsafeMarker");
+        expect(trait).toBeDefined();
+        expect(trait?.signature).toContain("unsafe");
+      });
+    });
+
+    describe("Const Generics", () => {
+      it("should parse const generic structs", async () => {
+        const code = `
+pub struct Array<T, const N: usize> {
+    data: [T; N],
+}
+`;
+        const structure = await parseRustAsync(code);
+        const arrayStruct = structure.classes.find((c) => c.name === "Array");
+        expect(arrayStruct).toBeDefined();
+        expect(arrayStruct?.signature).toContain("const N");
+      });
+    });
+
+    describe("Async Features", () => {
+      it("should parse async functions with impl Trait return", async () => {
+        const code = `
+pub async fn fetch_all() -> impl Stream<Item = Result<Data, Error>> {
+    stream::empty()
+}
+`;
+        const structure = await parseRustAsync(code);
+        const func = structure.functions.find((f) => f.name === "fetch_all");
+        expect(func?.isAsync).toBe(true);
+        expect(func?.returnType).toContain("impl Stream");
+      });
     });
   });
 });

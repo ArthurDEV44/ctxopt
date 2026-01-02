@@ -299,6 +299,7 @@ export function convertToFileStructure(
       endLine: 0,
     })),
     exports: [], // Not tracked in quick mode
+    enums: [], // Not tracked in quick mode
   };
 }
 

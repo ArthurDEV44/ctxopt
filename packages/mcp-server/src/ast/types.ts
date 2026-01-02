@@ -2,6 +2,7 @@
  * AST Types
  *
  * Shared type definitions for code parsing and extraction.
+ * Enhanced in 2025 for comprehensive TypeScript AST support.
  */
 
 export type SupportedLanguage =
@@ -24,7 +25,37 @@ export type ElementType =
   | "variable"
   | "import"
   | "export"
-  | "method";
+  | "method"
+  | "enum"
+  | "enum-member"
+  | "property"
+  | "getter"
+  | "setter"
+  | "constructor";
+
+export type Visibility = "public" | "private" | "protected";
+
+/**
+ * Detailed parameter information for functions/methods/constructors
+ */
+export interface ParameterInfo {
+  /** Parameter name */
+  name: string;
+  /** Type annotation if present */
+  type?: string;
+  /** Whether the parameter is optional (has ?) */
+  isOptional?: boolean;
+  /** Whether this is a rest parameter (...args) */
+  isRest?: boolean;
+  /** Default value expression if present */
+  defaultValue?: string;
+  /** Parameter decorators (TypeScript) */
+  decorators?: string[];
+  /** Visibility modifier for constructor parameter properties */
+  visibility?: Visibility;
+  /** Whether parameter property is readonly */
+  isReadonly?: boolean;
+}
 
 export interface CodeElement {
   /** Type of code element */
@@ -45,6 +76,35 @@ export interface CodeElement {
   isAsync?: boolean;
   /** Parent element name (for methods in classes) */
   parent?: string;
+
+  // Enhanced properties (2025)
+
+  /** Visibility modifier (public, private, protected) */
+  visibility?: Visibility;
+  /** Whether this is a static member */
+  isStatic?: boolean;
+  /** Whether this is abstract (class or method) */
+  isAbstract?: boolean;
+  /** Whether this is readonly (property) */
+  isReadonly?: boolean;
+  /** Decorators applied to this element */
+  decorators?: string[];
+  /** Generic type parameters (e.g., ["T", "K extends keyof T"]) */
+  generics?: string[];
+  /** Return type annotation */
+  returnType?: string;
+  /** Detailed parameter information */
+  parameters?: ParameterInfo[];
+  /** Child elements (class members, enum members, interface members) */
+  children?: CodeElement[];
+  /** Type annotation for properties/variables */
+  typeAnnotation?: string;
+  /** Initializer/default value expression */
+  initializer?: string;
+  /** Extended/implemented types (for classes/interfaces) */
+  extends?: string[];
+  /** Implemented interfaces (for classes) */
+  implements?: string[];
 }
 
 export interface FileStructure {
@@ -66,6 +126,8 @@ export interface FileStructure {
   types: CodeElement[];
   /** Variable/constant declarations */
   variables: CodeElement[];
+  /** Enum declarations (TS) */
+  enums: CodeElement[];
 }
 
 export interface ExtractedContent {
@@ -97,9 +159,10 @@ export interface ExtractionOptions {
 
 /**
  * Options for parsing control
+ * @deprecated The detailed option is now always true for better AST quality
  */
 export interface ParseOptions {
-  /** Extract signature and documentation (default: false for performance) */
+  /** @deprecated Always extracts full details now */
   detailed?: boolean;
 }
 
@@ -127,7 +190,10 @@ export interface LanguageParser {
 /**
  * Create an empty file structure
  */
-export function createEmptyStructure(language: SupportedLanguage, totalLines: number): FileStructure {
+export function createEmptyStructure(
+  language: SupportedLanguage,
+  totalLines: number
+): FileStructure {
   return {
     language,
     totalLines,
@@ -138,5 +204,6 @@ export function createEmptyStructure(language: SupportedLanguage, totalLines: nu
     interfaces: [],
     types: [],
     variables: [],
+    enums: [],
   };
 }
