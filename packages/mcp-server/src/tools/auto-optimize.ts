@@ -17,16 +17,64 @@ import { countTokens } from "../utils/token-counter.js";
 
 type OutputFormat = "plain" | "markdown";
 
-// Minimal schema - format rarely used, keep only essential properties
+// Input schema with semantic descriptions for better LLM understanding
 const autoOptimizeSchema = {
   type: "object" as const,
   properties: {
-    content: { type: "string" },
-    hint: { enum: ["build", "logs", "errors", "code", "auto"] },
-    aggressive: { type: "boolean" },
-    format: { enum: ["plain", "markdown"] },
+    content: {
+      type: "string",
+      description: "The content to optimize (build output, logs, errors, or any text)",
+      minLength: 100,
+    },
+    hint: {
+      enum: ["build", "logs", "errors", "code", "auto"],
+      description: "Content type hint: build (compiler errors), logs (server/test logs), errors (stack traces), code (source code), auto (detect)",
+      default: "auto",
+    },
+    aggressive: {
+      type: "boolean",
+      description: "Enable aggressive compression for maximum token savings",
+      default: false,
+    },
+    format: {
+      enum: ["plain", "markdown"],
+      description: "Output format",
+      default: "plain",
+    },
   },
   required: ["content"],
+};
+
+// Output schema per MCP 2025-06-18 spec for structured validation
+const autoOptimizeOutputSchema = {
+  type: "object" as const,
+  properties: {
+    detectedType: {
+      type: "string",
+      description: "Detected or specified content type",
+    },
+    originalTokens: {
+      type: "number",
+      description: "Token count before optimization",
+    },
+    optimizedTokens: {
+      type: "number",
+      description: "Token count after optimization",
+    },
+    savingsPercent: {
+      type: "number",
+      description: "Percentage of tokens saved (0-100)",
+    },
+    method: {
+      type: "string",
+      description: "Compression method used",
+    },
+    optimizedContent: {
+      type: "string",
+      description: "The optimized content",
+    },
+  },
+  required: ["detectedType", "originalTokens", "optimizedTokens", "savingsPercent", "optimizedContent"],
 };
 
 interface AutoOptimizeArgs {
@@ -229,7 +277,16 @@ async function autoOptimize(
 
 export const autoOptimizeTool: ToolDefinition = {
   name: "auto_optimize",
-  description: "Auto-compress verbose output (build errors, logs). 80-95% token reduction.",
+  description:
+    "Auto-compress verbose output (build errors, logs, stack traces). " +
+    "Detects content type and applies optimal compression. " +
+    "Typical savings: build errors 95%, logs 80-90%, generic 40-60%.",
   inputSchema: autoOptimizeSchema,
+  outputSchema: autoOptimizeOutputSchema,
+  annotations: {
+    title: "Auto Optimize Content",
+    readOnlyHint: true,
+    idempotentHint: true,
+  },
   execute: async (args) => autoOptimize(args as AutoOptimizeArgs),
 };

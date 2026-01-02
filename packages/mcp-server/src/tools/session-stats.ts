@@ -29,15 +29,32 @@ export const sessionStatsSchema = {
     action: {
       type: "string",
       enum: ["get", "reset", "export"],
-      description: "Action to perform: get stats, reset session, or export JSON",
+      description: "Action: get (view stats), reset (clear stats), export (JSON format)",
+      default: "get",
     },
     format: {
       type: "string",
       enum: ["summary", "detailed", "json"],
-      description: "Output format (default: summary)",
+      description: "Output format: summary (key metrics), detailed (full breakdown), json (machine-readable)",
+      default: "summary",
     },
   },
-  required: [],
+};
+
+/**
+ * Output schema per MCP 2025-06-18 spec
+ */
+const sessionStatsOutputSchema = {
+  type: "object" as const,
+  properties: {
+    sessionDuration: { type: "string", description: "Human-readable session duration" },
+    totalInvocations: { type: "number", description: "Total tool calls made" },
+    tokensProcessed: { type: "number", description: "Total tokens processed" },
+    tokensSaved: { type: "number", description: "Total tokens saved" },
+    optimizationRate: { type: "number", description: "Percentage of tokens saved" },
+    estimatedCostSaved: { type: "number", description: "Estimated cost saved in USD" },
+  },
+  required: ["totalInvocations", "tokensSaved"],
 };
 
 const inputSchema = z.object({
@@ -243,7 +260,14 @@ export async function executeSessionStats(
 export const sessionStatsTool: ToolDefinition = {
   name: "session_stats",
   description:
-    "Get session-wide statistics including tokens saved, cost reduction, and per-tool usage breakdown. Use action='reset' to start fresh or action='export' for JSON output.",
+    "Get session-wide statistics including tokens saved, cost reduction, and per-tool usage breakdown. " +
+    "Use action='reset' to start fresh or action='export' for JSON output.",
   inputSchema: sessionStatsSchema,
+  outputSchema: sessionStatsOutputSchema,
+  annotations: {
+    title: "Session Statistics",
+    readOnlyHint: true,
+    idempotentHint: true,
+  },
   execute: executeSessionStats,
 };

@@ -113,22 +113,64 @@ function validatePath(
 export const smartFileReadSchema = {
   type: "object" as const,
   properties: {
-    filePath: { type: "string" },
+    filePath: {
+      type: "string",
+      description: "Path to the file to read (relative to working directory)",
+    },
     target: {
+      type: "object",
+      description: "Extract a specific code element by type and name",
       properties: {
-        type: { enum: ["function", "class", "interface", "type", "variable", "method"] },
-        name: { type: "string" },
+        type: {
+          enum: ["function", "class", "interface", "type", "variable", "method"],
+          description: "Type of element to extract",
+        },
+        name: {
+          type: "string",
+          description: "Name of the element to extract",
+        },
       },
+      required: ["type", "name"],
     },
-    query: { type: "string" },
+    query: {
+      type: "string",
+      description: "Search query to find matching elements in the file",
+    },
     lines: {
-      properties: { start: { type: "number" }, end: { type: "number" } },
+      type: "object",
+      description: "Extract specific line range",
+      properties: {
+        start: { type: "number", description: "Start line (1-indexed)" },
+        end: { type: "number", description: "End line (inclusive)" },
+      },
+      required: ["start", "end"],
     },
-    skeleton: { type: "boolean" },
-    // Rarely-used properties omitted from schema but still supported:
-    // cache, language, format, includeImports, includeComments
+    skeleton: {
+      type: "boolean",
+      description: "Return only function/class signatures without bodies (70-90% savings)",
+      default: false,
+    },
   },
   required: ["filePath"],
+};
+
+/**
+ * Output schema per MCP 2025-06-18 spec
+ */
+const smartFileReadOutputSchema = {
+  type: "object" as const,
+  properties: {
+    filePath: { type: "string", description: "Path to the file read" },
+    language: { type: "string", description: "Detected programming language" },
+    totalLines: { type: "number", description: "Total lines in file" },
+    content: { type: "string", description: "Extracted content or structure summary" },
+    mode: {
+      type: "string",
+      enum: ["structure", "target", "query", "lines", "skeleton"],
+      description: "Extraction mode used",
+    },
+  },
+  required: ["filePath", "content"],
 };
 
 const inputSchema = z.object({
@@ -572,7 +614,17 @@ export async function executeSmartFileRead(
 
 export const smartFileReadTool: ToolDefinition = {
   name: "smart_file_read",
-  description: "Read code with AST extraction. Modes: structure, target, query, lines, skeleton.",
+  description:
+    "Read code with AST extraction. Supports 5 modes: " +
+    "structure (file overview), target (extract function/class by name), " +
+    "query (search elements), lines (specific range), skeleton (signatures only). " +
+    "Typical savings: 50-70% vs full file read.",
   inputSchema: smartFileReadSchema,
+  outputSchema: smartFileReadOutputSchema,
+  annotations: {
+    title: "Smart File Read",
+    readOnlyHint: true,
+    idempotentHint: true,
+  },
   execute: executeSmartFileRead,
 };

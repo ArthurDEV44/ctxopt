@@ -34,17 +34,20 @@ import type { ToolDefinition } from "./registry.js";
 
 /**
  * Maximum tokens allowed per tool definition.
- * These are intentionally tight to catch any bloat early.
  *
  * 2024-12: Tightened budgets after schema optimization
+ * 2026-01: Increased budgets to accommodate MCP 2025-06-18 spec requirements:
+ *          - Semantic property descriptions for better LLM tool selection
+ *          - Output schemas for structured validation
+ *          - Tool annotations (readOnlyHint, idempotentHint, etc.)
  */
 const TOKEN_BUDGETS = {
-  // Core tools (always loaded) - ultra-minimal
-  auto_optimize: 90,
-  smart_file_read: 120,
-  discover_tools: 80, // +5 for TOON format option
+  // Core tools (always loaded) - includes semantic descriptions + outputSchema
+  auto_optimize: 200, // +110 for outputSchema + semantic descriptions
+  smart_file_read: 280, // +160 for outputSchema + detailed property descriptions
+  discover_tools: 180, // +100 for outputSchema + semantic hints
 
-  // Compress category - aggressively optimized
+  // Compress category - with semantic descriptions
   compress_context: 95,
   semantic_compress: 60,
   diff_compress: 75,
@@ -55,7 +58,7 @@ const TOKEN_BUDGETS = {
   context_budget: 105,
 
   // Logs category
-  summarize_logs: 115,
+  summarize_logs: 180, // +65 for outputSchema + semantic descriptions
   deduplicate_errors: 65,
 
   // Code category
@@ -70,14 +73,16 @@ const TOKEN_BUDGETS = {
  * Maximum tokens for the entire ListTools response (core tools only).
  * Currently: auto_optimize + smart_file_read + discover_tools
  * 2024-12: Reduced from 500 after schema optimization
+ * 2026-01: Increased to 700 for MCP 2025-06-18 compliance (outputSchemas + annotations)
  */
-const CORE_TOOLS_BUDGET = 300;
+const CORE_TOOLS_BUDGET = 700;
 
 /**
  * Maximum tokens for all tools combined.
  * 2024-12: Reduced from 1500 after aggressive schema optimization
+ * 2026-01: Increased to 1800 for MCP 2025-06-18 compliance
  */
-const ALL_TOOLS_BUDGET = 1200;
+const ALL_TOOLS_BUDGET = 1800;
 
 // ============================================================================
 // Helper Functions
@@ -200,34 +205,37 @@ describe("Tool Token Budgets", () => {
 describe("Tool Schema Constraints", () => {
   describe("Description length", () => {
     it.each(ALL_TOOLS.map((t) => [t.name, t]))(
-      "%s description should be concise (< 150 chars)",
+      "%s description should be informative but not excessive (< 350 chars)",
       (name, tool) => {
         const description = (tool as ToolDefinition).description;
-        expect(description.length).toBeLessThan(150);
+        // 2026-01: Increased from 150 to 350 chars per MCP best practices
+        // Semantic descriptions improve LLM tool selection accuracy
+        expect(description.length).toBeLessThan(350);
       }
     );
   });
 
   describe("Schema structure", () => {
     it.each(ALL_TOOLS.map((t) => [t.name, t]))(
-      "%s should not have deeply nested descriptions",
+      "%s should have well-documented properties",
       (name, tool) => {
         const schema = (tool as ToolDefinition).inputSchema;
         const serialized = JSON.stringify(schema);
 
-        // Count "description" occurrences - should be minimal
+        // Count "description" occurrences
         const descriptionCount = (serialized.match(/"description"/g) || [])
           .length;
 
-        // Allow max 3 descriptions per schema (for complex tools)
-        expect(descriptionCount).toBeLessThanOrEqual(3);
+        // 2026-01: Increased to 10 to allow semantic property descriptions
+        // per MCP 2025-06-18 best practices for LLM guidance
+        expect(descriptionCount).toBeLessThanOrEqual(10);
       }
     );
   });
 });
 
 describe("ListTools Response Size", () => {
-  it("should generate compact ListTools response for core tools", () => {
+  it("should generate ListTools response for core tools within budget", () => {
     const response = {
       tools: CORE_TOOLS.map((tool) => ({
         name: tool.name,
@@ -239,13 +247,13 @@ describe("ListTools Response Size", () => {
     const serialized = JSON.stringify(response);
     const tokens = countTokens(serialized);
 
-    // ListTools response should be under 600 tokens for core tools
-    expect(tokens).toBeLessThan(600);
+    // 2026-01: Increased from 600 to 900 tokens for semantic descriptions
+    expect(tokens).toBeLessThan(900);
 
     console.log(`  ListTools (core): ${serialized.length} chars, ${tokens} tokens`);
   });
 
-  it("should generate compact ListTools response for all tools", () => {
+  it("should generate ListTools response for all tools within budget", () => {
     const response = {
       tools: ALL_TOOLS.map((tool) => ({
         name: tool.name,
@@ -257,70 +265,52 @@ describe("ListTools Response Size", () => {
     const serialized = JSON.stringify(response);
     const tokens = countTokens(serialized);
 
-    // Full ListTools response should be under 1800 tokens
-    expect(tokens).toBeLessThan(1800);
+    // 2026-01: Increased from 1800 to 2200 tokens for MCP 2025-06-18 compliance
+    expect(tokens).toBeLessThan(2200);
 
     console.log(`  ListTools (all): ${serialized.length} chars, ${tokens} tokens`);
   });
 });
 
-describe("Token Reduction Verification", () => {
+describe("MCP 2025-06-18 Compliance Verification", () => {
   /**
-   * Baseline values from BEFORE optimization (commit d4cdb98).
-   * These are used to verify we actually reduced tokens.
+   * 2026-01: Updated to verify MCP 2025-06-18 compliance instead of
+   * token reduction. The semantic descriptions and outputSchemas
+   * intentionally add tokens for better LLM tool selection.
+   *
+   * These tests verify tools have the required MCP 2025-06-18 features.
    */
-  const BASELINE_TOKENS = {
-    auto_optimize: 287,
-    smart_file_read: 342,
-    discover_tools: 153,
-    core_total: 782,
-  };
 
-  it("auto_optimize should be reduced from baseline", () => {
-    const current = countToolTokens(autoOptimizeTool);
-    const baseline = BASELINE_TOKENS.auto_optimize;
-    const reduction = Math.round((1 - current / baseline) * 100);
-
-    expect(current).toBeLessThan(baseline);
-    expect(reduction).toBeGreaterThan(30); // At least 30% reduction
-
-    console.log(`  auto_optimize: ${baseline} → ${current} (${reduction}% reduction)`);
+  it("auto_optimize should have outputSchema and annotations", () => {
+    expect(autoOptimizeTool.outputSchema).toBeDefined();
+    expect(autoOptimizeTool.annotations).toBeDefined();
+    expect(autoOptimizeTool.annotations?.readOnlyHint).toBe(true);
+    expect(autoOptimizeTool.annotations?.idempotentHint).toBe(true);
   });
 
-  it("smart_file_read should be reduced from baseline", () => {
-    const current = countToolTokens(smartFileReadTool);
-    const baseline = BASELINE_TOKENS.smart_file_read;
-    const reduction = Math.round((1 - current / baseline) * 100);
-
-    expect(current).toBeLessThan(baseline);
-    expect(reduction).toBeGreaterThan(20); // At least 20% reduction
-
-    console.log(`  smart_file_read: ${baseline} → ${current} (${reduction}% reduction)`);
+  it("smart_file_read should have outputSchema and annotations", () => {
+    expect(smartFileReadTool.outputSchema).toBeDefined();
+    expect(smartFileReadTool.annotations).toBeDefined();
+    expect(smartFileReadTool.annotations?.readOnlyHint).toBe(true);
   });
 
-  it("discover_tools should be reduced from baseline", () => {
-    const current = countToolTokens(discoverToolsTool);
-    const baseline = BASELINE_TOKENS.discover_tools;
-    const reduction = Math.round((1 - current / baseline) * 100);
-
-    expect(current).toBeLessThan(baseline);
-    expect(reduction).toBeGreaterThan(20); // At least 20% reduction
-
-    console.log(`  discover_tools: ${baseline} → ${current} (${reduction}% reduction)`);
+  it("discover_tools should have outputSchema and annotations", () => {
+    expect(discoverToolsTool.outputSchema).toBeDefined();
+    expect(discoverToolsTool.annotations).toBeDefined();
+    expect(discoverToolsTool.annotations?.readOnlyHint).toBe(true);
   });
 
-  it("core tools total should be at least 40% reduced from baseline", () => {
-    const currentTotal = CORE_TOOLS.reduce(
-      (sum, tool) => sum + countToolTokens(tool),
-      0
-    );
-    const baseline = BASELINE_TOKENS.core_total;
-    const reduction = Math.round((1 - currentTotal / baseline) * 100);
+  it("core tools should have semantic property descriptions", () => {
+    for (const tool of CORE_TOOLS) {
+      const schema = tool.inputSchema as Record<string, unknown>;
+      const properties = schema.properties as Record<string, { description?: string }>;
 
-    expect(currentTotal).toBeLessThan(baseline);
-    expect(reduction).toBeGreaterThan(40); // At least 40% total reduction
-
-    console.log(`  Core total: ${baseline} → ${currentTotal} (${reduction}% reduction)`);
+      // Each property should have a description
+      for (const [propName, propDef] of Object.entries(properties)) {
+        expect(propDef.description).toBeDefined();
+        expect(propDef.description?.length).toBeGreaterThan(10);
+      }
+    }
   });
 });
 
@@ -331,22 +321,22 @@ describe("Regression Prevention", () => {
    * Any unexpected change will fail the test.
    *
    * 2024-12: Optimized schemas to reduce token overhead
-   * - Removed property descriptions (moved to tool description)
-   * - Removed rarely-used properties from public schema
-   * - Simplified nested object type declarations
-   * - Added TOON format output option to discover_tools
+   * 2026-01: Updated for MCP 2025-06-18 compliance
+   * - Added semantic property descriptions for LLM guidance
+   * - Added outputSchema for structured validation
+   * - Added annotations (readOnlyHint, idempotentHint, etc.)
    */
   const CURRENT_SNAPSHOT = {
-    auto_optimize: 80,
-    smart_file_read: 106,
-    discover_tools: 78, // +15 for TOON format option (list|toon|toon-tabular)
+    auto_optimize: 184, // +104 for outputSchema + semantic descriptions
+    smart_file_read: 263, // +157 for outputSchema + property descriptions
+    discover_tools: 167, // +89 for outputSchema + semantic hints
   };
 
-  // Tolerance: ±5 tokens for minor changes
-  const TOLERANCE = 5;
+  // Tolerance: ±10 tokens for minor changes
+  const TOLERANCE = 10;
 
   it.each(Object.entries(CURRENT_SNAPSHOT))(
-    "%s should match snapshot (±5 tokens)",
+    "%s should match snapshot (±10 tokens)",
     (name, expected) => {
       const tool = ALL_TOOLS.find((t) => t.name === name);
       if (!tool) throw new Error(`Tool ${name} not found`);

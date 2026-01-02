@@ -8,10 +8,31 @@ import type { ToolContext, ToolResult } from "../middleware/types.js";
 import type { MiddlewareChain } from "../middleware/chain.js";
 import { countTokens } from "../utils/token-counter.js";
 
+/**
+ * Tool annotations per MCP 2025-06-18 specification
+ * @see https://modelcontextprotocol.io/specification/2025-06-18/server/tools
+ */
+export interface ToolAnnotations {
+  /** Tool only reads data, doesn't modify state */
+  readOnlyHint?: boolean;
+  /** Tool may perform destructive operations */
+  destructiveHint?: boolean;
+  /** Tool is idempotent (same input = same result) */
+  idempotentHint?: boolean;
+  /** Tool may take a long time to execute */
+  longRunningHint?: boolean;
+  /** Human-readable title for the tool */
+  title?: string;
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
+  /** Output schema for structured result validation (MCP 2025-06-18) */
+  outputSchema?: Record<string, unknown>;
+  /** Tool behavior annotations for LLM guidance */
+  annotations?: ToolAnnotations;
   execute: (args: unknown) => Promise<ToolExecuteResult>;
 }
 
@@ -88,17 +109,40 @@ export class ToolRegistry {
 
   /**
    * Get tool definitions for MCP ListTools response
+   * Includes outputSchema and annotations per MCP 2025-06-18 spec
    */
   getToolDefinitions(): Array<{
     name: string;
     description: string;
     inputSchema: Record<string, unknown>;
+    outputSchema?: Record<string, unknown>;
+    annotations?: ToolAnnotations;
   }> {
-    return this.list().map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      inputSchema: tool.inputSchema,
-    }));
+    return this.list().map((tool) => {
+      const def: {
+        name: string;
+        description: string;
+        inputSchema: Record<string, unknown>;
+        outputSchema?: Record<string, unknown>;
+        annotations?: ToolAnnotations;
+      } = {
+        name: tool.name,
+        description: tool.description,
+        inputSchema: tool.inputSchema,
+      };
+
+      // Include outputSchema if defined (MCP 2025-06-18)
+      if (tool.outputSchema) {
+        def.outputSchema = tool.outputSchema;
+      }
+
+      // Include annotations if defined
+      if (tool.annotations) {
+        def.annotations = tool.annotations;
+      }
+
+      return def;
+    });
   }
 
   /**

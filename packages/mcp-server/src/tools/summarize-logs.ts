@@ -19,16 +19,46 @@ import {
 } from "../summarizers/index.js";
 import { detectLogType } from "../utils/log-parser.js";
 
-// Minimal schema - timeframe rarely used
+// Input schema with semantic descriptions
 export const summarizeLogsSchema = {
   type: "object" as const,
   properties: {
-    logs: { type: "string" },
-    logType: { enum: ["server", "test", "build", "application", "generic"] },
-    focus: { type: "array", items: { enum: ["errors", "warnings", "performance", "timeline"] } },
-    detail: { enum: ["minimal", "normal", "detailed"] },
+    logs: {
+      type: "string",
+      description: "Raw log content to summarize",
+    },
+    logType: {
+      enum: ["server", "test", "build", "application", "generic"],
+      description: "Log type hint for better parsing (auto-detected if omitted)",
+    },
+    focus: {
+      type: "array",
+      items: { enum: ["errors", "warnings", "performance", "timeline"] },
+      description: "Areas to focus on in the summary",
+    },
+    detail: {
+      enum: ["minimal", "normal", "detailed"],
+      description: "Level of detail in output",
+      default: "normal",
+    },
   },
   required: ["logs"],
+};
+
+/**
+ * Output schema per MCP 2025-06-18 spec
+ */
+const summarizeLogsOutputSchema = {
+  type: "object" as const,
+  properties: {
+    logType: { type: "string", description: "Detected or specified log type" },
+    overview: { type: "string", description: "Brief summary of log contents" },
+    errorCount: { type: "number", description: "Number of errors found" },
+    warningCount: { type: "number", description: "Number of warnings found" },
+    tokensSaved: { type: "number", description: "Tokens saved vs original" },
+    savingsPercent: { type: "number", description: "Percentage reduction" },
+  },
+  required: ["logType", "overview"],
 };
 
 const inputSchema = z.object({
@@ -223,7 +253,16 @@ function truncate(str: string, maxLen: number): string {
 export const summarizeLogsTool: ToolDefinition = {
   name: "summarize_logs",
   description:
-    "Summarize logs. Extracts errors, warnings, key events. Auto-detects log type.",
+    "Summarize verbose logs with intelligent extraction. " +
+    "Auto-detects log type (server, test, build, application). " +
+    "Extracts errors, warnings, key events, and performance metrics. " +
+    "Typical savings: 80-90%.",
   inputSchema: summarizeLogsSchema,
+  outputSchema: summarizeLogsOutputSchema,
+  annotations: {
+    title: "Summarize Logs",
+    readOnlyHint: true,
+    idempotentHint: true,
+  },
   execute: executeSummarizeLogs,
 };

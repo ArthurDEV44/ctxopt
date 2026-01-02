@@ -108,6 +108,46 @@ Nouveau mode de résumé pour les fichiers volumineux :
 
 ---
 
+## Conformité MCP 2025-06-18
+
+### Output Schemas
+
+Tous les outils principaux incluent maintenant des schémas de sortie conformes à la spécification MCP 2025-06-18 :
+
+- **Validation structurée** : Les résultats sont validés contre un schéma défini
+- **Documentation automatique** : Chaque champ de sortie est documenté avec sa description et son type
+- **Interopérabilité** : Meilleure intégration avec les clients MCP conformes
+
+Outils mis à jour : `auto_optimize`, `smart_file_read`, `discover_tools`, `code_execute`, `session_stats`, `summarize_logs`.
+
+### Annotations d'outils
+
+Nouveau système d'annotations pour guider les LLMs dans l'utilisation des outils :
+
+- **readOnlyHint** : Indique que l'outil ne modifie pas l'état du système
+- **destructiveHint** : Avertit des opérations potentiellement destructives
+- **idempotentHint** : Signale que le même input produit toujours le même résultat
+- **longRunningHint** : Prévient que l'exécution peut être longue
+- **title** : Titre lisible pour l'affichage dans les interfaces
+
+### Descriptions sémantiques
+
+Les schémas d'entrée incluent maintenant des descriptions détaillées pour chaque propriété :
+
+- Amélioration de la sélection automatique d'outils par les LLMs
+- Documentation inline des paramètres avec valeurs par défaut
+- Contraintes de validation (`minLength`, `minimum`, `maximum`)
+
+### Registre d'outils étendu
+
+Le `ToolRegistry` supporte maintenant :
+
+- `outputSchema` optionnel pour chaque outil
+- `annotations` pour les métadonnées comportementales
+- Sérialisation complète dans la réponse `ListTools`
+
+---
+
 ## Pipeline Builder fluide
 
 Nouvelle API chaînable pour les opérations multi-étapes :

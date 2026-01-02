@@ -9,15 +9,40 @@ import type { ToolDefinition } from "./registry.js";
 import { executeSandbox, DEFAULT_LIMITS } from "../sandbox/index.js";
 
 /**
- * Minimal schema for token efficiency
+ * Input schema with semantic descriptions
  */
 const codeExecuteSchema = {
   type: "object" as const,
   properties: {
-    code: { type: "string" },
-    timeout: { type: "number" },
+    code: {
+      type: "string",
+      description:
+        "TypeScript code to execute. Use 'return' to output results. " +
+        "Access SDK via 'ctx' object (ctx.files, ctx.compress, ctx.code, etc.)",
+    },
+    timeout: {
+      type: "number",
+      description: "Execution timeout in ms (1000-30000)",
+      minimum: 1000,
+      maximum: 30000,
+      default: 5000,
+    },
   },
   required: ["code"],
+};
+
+/**
+ * Output schema per MCP 2025-06-18 spec
+ */
+const codeExecuteOutputSchema = {
+  type: "object" as const,
+  properties: {
+    success: { type: "boolean", description: "Whether execution succeeded" },
+    output: { type: "string", description: "Execution result or error message" },
+    executionTimeMs: { type: "number", description: "Time taken in milliseconds" },
+    tokensUsed: { type: "number", description: "Tokens in output" },
+  },
+  required: ["success", "output"],
 };
 
 interface CodeExecuteArgs {
@@ -98,5 +123,12 @@ export const codeExecuteTool: ToolDefinition = {
   name: "code_execute",
   description: DESCRIPTION,
   inputSchema: codeExecuteSchema,
+  outputSchema: codeExecuteOutputSchema,
+  annotations: {
+    title: "Execute TypeScript Code",
+    readOnlyHint: false, // Can modify files via ctx.files
+    idempotentHint: false, // Results depend on filesystem state
+    longRunningHint: true, // May take up to 30s
+  },
   execute: executeCodeExecute,
 };

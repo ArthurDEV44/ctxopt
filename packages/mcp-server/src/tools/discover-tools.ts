@@ -18,15 +18,55 @@ import {
   type ToolMetadataLite,
 } from "../utils/toon-serializer.js";
 
-// Minimal schema - descriptions in tool description, not properties
+// Input schema with semantic descriptions per MCP best practices
 const discoverToolsSchema = {
   type: "object" as const,
   properties: {
-    query: { type: "string" },
-    category: { enum: ["compress", "analyze", "logs", "code", "pipeline"] },
-    load: { type: "boolean" },
-    format: { enum: ["list", "toon", "toon-tabular"] },
+    query: {
+      type: "string",
+      description: "Search query to find tools by name or description",
+    },
+    category: {
+      enum: ["compress", "analyze", "logs", "code", "pipeline"],
+      description: "Filter tools by category",
+    },
+    load: {
+      type: "boolean",
+      description: "Activate matched tools for immediate use",
+      default: false,
+    },
+    format: {
+      enum: ["list", "toon", "toon-tabular"],
+      description: "Output format: list (readable), toon/toon-tabular (token-efficient ~55% savings)",
+      default: "list",
+    },
   },
+};
+
+/**
+ * Output schema per MCP 2025-06-18 spec
+ */
+const discoverToolsOutputSchema = {
+  type: "object" as const,
+  properties: {
+    matchedTools: {
+      type: "array",
+      description: "List of matching tools",
+      items: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          category: { type: "string" },
+          description: { type: "string" },
+        },
+      },
+    },
+    loadedCount: {
+      type: "number",
+      description: "Number of tools activated (if load=true)",
+    },
+  },
+  required: ["matchedTools"],
 };
 
 type OutputFormat = "list" | "toon" | "toon-tabular";
@@ -205,7 +245,17 @@ function formatListOutput(
 
 export const discoverToolsTool: ToolDefinition = {
   name: "discover_tools",
-  description: "Find and load optimization tools. Categories: compress, analyze, logs, code, pipeline.",
+  description:
+    "Find and load optimization tools on-demand. " +
+    "Categories: compress (token reduction), analyze (parsing), logs (summarization), " +
+    "code (AST extraction), pipeline (chained operations). " +
+    "Use TOON format for 55% additional token savings.",
   inputSchema: discoverToolsSchema,
+  outputSchema: discoverToolsOutputSchema,
+  annotations: {
+    title: "Discover Tools",
+    readOnlyHint: true,
+    idempotentHint: true,
+  },
   execute: executeDiscoverTools,
 };
