@@ -2,6 +2,7 @@
  * Generic Logs Summarizer
  *
  * Fallback summarizer for application logs that don't match specific patterns.
+ * Enhanced in 2026 with advanced scoring, clustering, and pattern extraction.
  */
 
 import type {
@@ -19,6 +20,9 @@ import {
   isKeyEvent,
 } from "../utils/log-parser.js";
 import { MAX_ENTRIES } from "./types.js";
+import { createLogScorer, getBalancedTopEntries } from "./scoring.js";
+import { clusterLogs, selectRepresentatives } from "./clustering.js";
+import { extractPatterns, getPatternStats } from "./pattern-extraction.js";
 
 /**
  * Generic logs summarizer
@@ -34,9 +38,6 @@ export const genericSummarizer: Summarizer = {
 
   summarize(logs: string, options: SummarizeOptions): LogSummary {
     const lines = logs.split("\n").filter((l) => l.trim());
-    const errors: LogEntry[] = [];
-    const warnings: LogEntry[] = [];
-    const keyEvents: LogEntry[] = [];
     const allEntries: LogEntry[] = [];
 
     // Parse all lines
@@ -46,61 +47,100 @@ export const genericSummarizer: Summarizer = {
 
       const entry = parseLogLine(trimmed);
       allEntries.push(entry);
-
-      // Categorize by level
-      switch (entry.level) {
-        case "error":
-          errors.push(entry);
-          break;
-        case "warning":
-          warnings.push(entry);
-          break;
-      }
-
-      // Detect key events
-      if (isKeyEvent(trimmed)) {
-        keyEvents.push(entry);
-      }
     }
 
     // Filter by timeframe if specified
     const filteredEntries = filterByTimeframe(allEntries, options.timeframe);
 
+    // Use advanced scoring for ranking (2026 enhancement)
+    const scorer = createLogScorer(filteredEntries);
+    const scoredEntries = scorer.scoreAll();
+
+    // Get errors and warnings using scoring
+    const scoredErrors = scorer.getByLevel("error", MAX_ENTRIES[options.detail].errors * 2);
+    const scoredWarnings = scorer.getByLevel("warning", MAX_ENTRIES[options.detail].warnings * 2);
+
+    // Convert to LogEntry and deduplicate
+    const errors = deduplicateEntries(
+      scoredErrors.map((e) => ({
+        timestamp: e.timestamp,
+        level: e.level,
+        message: e.message,
+        count: e.count,
+        context: e.context,
+        raw: e.raw,
+      }))
+    );
+
+    const warnings = deduplicateEntries(
+      scoredWarnings.map((e) => ({
+        timestamp: e.timestamp,
+        level: e.level,
+        message: e.message,
+        count: e.count,
+        context: e.context,
+        raw: e.raw,
+      }))
+    );
+
+    // Use clustering for key events (2026 enhancement)
+    const clusters = clusterLogs(filteredEntries, {
+      similarityThreshold: 0.7,
+      maxClusters: MAX_ENTRIES[options.detail].events * 2,
+    });
+
+    // Get representatives from clusters as key events
+    const clusterRepresentatives = selectRepresentatives(clusters, 1);
+    const keyEvents = clusterRepresentatives
+      .slice(0, MAX_ENTRIES[options.detail].events)
+      .map((e) => ({
+        timestamp: e.timestamp,
+        level: e.level,
+        message: e.message,
+        count: e.count,
+        context: e.context,
+        raw: e.raw,
+      }));
+
     // Calculate timespan
     const timespan = calculateTimespan(filteredEntries);
 
-    // Deduplicate errors and warnings
-    const deduplicatedErrors = deduplicateEntries(errors);
-    const deduplicatedWarnings = deduplicateEntries(warnings);
+    // Extract patterns for enhanced statistics (2026)
+    const patterns = extractPatterns(filteredEntries, { maxPatterns: 10 });
+    const patternStats = getPatternStats(patterns);
 
     // Build statistics
     const statistics: LogStatistics = {
       timespan,
       totalLines: lines.length,
-      errorCount: errors.length,
-      warningCount: warnings.length,
-      infoCount: allEntries.filter((e) => e.level === "info").length,
-      debugCount: allEntries.filter((e) => e.level === "debug").length,
+      errorCount: filteredEntries.filter((e) => e.level === "error").length,
+      warningCount: filteredEntries.filter((e) => e.level === "warning").length,
+      infoCount: filteredEntries.filter((e) => e.level === "info").length,
+      debugCount: filteredEntries.filter((e) => e.level === "debug").length,
     };
 
-    // Build overview
-    const overview = buildOverview(statistics);
+    // Build enhanced overview with pattern info
+    const overview = buildOverview(statistics, patternStats.totalPatterns, clusters.length);
 
     return {
       logType: options.logType || "generic",
       overview,
-      errors: deduplicatedErrors.slice(0, MAX_ENTRIES[options.detail].errors),
-      warnings: deduplicatedWarnings.slice(0, MAX_ENTRIES[options.detail].warnings),
-      keyEvents: keyEvents.slice(0, MAX_ENTRIES[options.detail].events),
+      errors: errors.slice(0, MAX_ENTRIES[options.detail].errors),
+      warnings: warnings.slice(0, MAX_ENTRIES[options.detail].warnings),
+      keyEvents,
       statistics,
     };
   },
 };
 
 /**
- * Build overview text
+ * Build overview text with enhanced pattern and cluster info
  */
-function buildOverview(stats: LogStatistics): string {
+function buildOverview(
+  stats: LogStatistics,
+  patternCount: number = 0,
+  clusterCount: number = 0
+): string {
   const parts: string[] = [];
 
   parts.push(`${stats.totalLines.toLocaleString()} lines`);
@@ -116,6 +156,18 @@ function buildOverview(stats: LogStatistics): string {
 
   if (levelCounts.length > 0) {
     parts.push(`(${levelCounts.join(", ")})`);
+  }
+
+  // Add pattern and cluster info for enhanced summary
+  const extras: string[] = [];
+  if (patternCount > 0) {
+    extras.push(`${patternCount} patterns`);
+  }
+  if (clusterCount > 0) {
+    extras.push(`${clusterCount} clusters`);
+  }
+  if (extras.length > 0) {
+    parts.push(`[${extras.join(", ")}]`);
   }
 
   return parts.join(" ") || "Log summary";

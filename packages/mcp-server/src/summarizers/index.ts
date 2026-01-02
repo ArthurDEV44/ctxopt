@@ -2,6 +2,7 @@
  * Log Summarizers
  *
  * Exports all summarizers and utility functions.
+ * Enhanced in 2026 with advanced scoring, clustering, and pattern extraction.
  */
 
 export * from "./types.js";
@@ -9,6 +10,12 @@ export { serverLogsSummarizer } from "./server-logs.js";
 export { testLogsSummarizer } from "./test-logs.js";
 export { buildLogsSummarizer } from "./build-logs.js";
 export { genericSummarizer } from "./generic.js";
+
+// Advanced modules (2026)
+export * from "./scoring.js";
+export * from "./pattern-extraction.js";
+export * from "./clustering.js";
+export * from "./hierarchical.js";
 
 import type { Summarizer, LogType } from "./types.js";
 import { serverLogsSummarizer } from "./server-logs.js";
