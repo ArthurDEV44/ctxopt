@@ -2,12 +2,16 @@
  * Sandbox Executor
  *
  * Executes user code in a sandboxed environment with Distill SDK.
- * Uses Function constructor with restricted scope for isolation.
+ *
+ * Supports two execution modes:
+ * - Legacy: Uses Function constructor (fast but not fully isolated)
+ * - QuickJS: Uses WebAssembly sandbox (secure isolation)
+ *
+ * Set DISTILL_USE_QUICKJS=true to enable QuickJS sandbox.
  */
 
 import * as fs from "fs";
 import * as path from "path";
-import { glob } from "fs/promises";
 import {
   compressAuto,
   compressLogs,
@@ -19,13 +23,15 @@ import {
   countTokens,
   detectType,
   detectLanguage,
-  createFilesAPI,
-  createGitAPI,
-  createSearchAPI,
+  // Use legacy APIs that throw on error (for backward compat at boundary)
+  createFilesAPILegacy,
+  createGitAPILegacy,
+  createSearchAPILegacy,
   createAnalyzeAPI,
   createPipelineAPI,
   createMultifileAPI,
   createConversationAPI,
+  createFluentPipelineAPI,
 } from "./sdk/index.js";
 import { analyzeCode, sanitizeError } from "./security/index.js";
 import { validatePath, validateGlobPattern } from "./security/path-validator.js";
@@ -34,8 +40,23 @@ import type {
   ExecutionResult,
   HostCallbacks,
   CtxOptSDK,
-  DEFAULT_LIMITS,
 } from "./types.js";
+
+// QuickJS imports (lazy loaded)
+import {
+  createQuickJSRuntime,
+  generateGuestSDKCode,
+  createHostBridge,
+} from "./quickjs/index.js";
+
+// Disposable utilities for resource management (TS 5.2+ using keyword)
+import { createTimeout, createDisposableSandbox } from "./disposables.js";
+
+/**
+ * Feature flag for QuickJS sandbox
+ * Set DISTILL_USE_QUICKJS=true to enable secure WebAssembly isolation
+ */
+const USE_QUICKJS = process.env.DISTILL_USE_QUICKJS === "true";
 
 /**
  * Create host callbacks for file operations
@@ -71,7 +92,6 @@ function createHostCallbacks(workingDir: string): HostCallbacks {
 
       // Synchronous glob using fs
       const results: string[] = [];
-      const searchDir = path.dirname(validation.resolvedPath!);
       const basePattern = path.basename(pattern);
 
       function walkDir(dir: string, relativePath: string = ""): void {
@@ -117,11 +137,12 @@ function matchesPattern(filename: string, pattern: string): boolean {
 }
 
 /**
- * Create the SDK object for sandbox
+ * Create the SDK object for sandbox (legacy mode)
+ * Uses legacy throwing APIs for backward compatibility
  */
 function createSDK(workingDir: string): CtxOptSDK {
   const callbacks = createHostCallbacks(workingDir);
-  const filesAPI = createFilesAPI(callbacks);
+  const filesAPI = createFilesAPILegacy(callbacks);
 
   return {
     compress: {
@@ -141,19 +162,128 @@ function createSDK(workingDir: string): CtxOptSDK {
       detectType,
       detectLanguage,
     },
-    git: createGitAPI(workingDir),
-    search: createSearchAPI(workingDir, callbacks),
+    git: createGitAPILegacy(workingDir),
+    search: createSearchAPILegacy(workingDir, callbacks),
     analyze: createAnalyzeAPI(workingDir, callbacks),
     pipeline: createPipelineAPI(workingDir, callbacks),
     multifile: createMultifileAPI(workingDir, callbacks),
     conversation: createConversationAPI(workingDir, callbacks),
+    pipe: createFluentPipelineAPI(workingDir, callbacks),
   };
 }
 
 /**
- * Execute code in sandbox
+ * Execute code using QuickJS WebAssembly sandbox (secure)
+ * Uses `await using` for automatic resource cleanup.
  */
-export async function executeSandbox(
+async function executeSandboxQuickJS(
+  code: string,
+  context: ExecutionContext
+): Promise<ExecutionResult> {
+  const startTime = Date.now();
+
+  // Security: analyze code before execution (defense in depth)
+  const analysis = analyzeCode(code);
+  if (!analysis.safe) {
+    return {
+      success: false,
+      output: null,
+      error: `Blocked patterns: ${analysis.blockedPatterns.join(", ")}`,
+      stats: {
+        executionTimeMs: Date.now() - startTime,
+        tokensUsed: 0,
+      },
+    };
+  }
+
+  // Use `await using` for automatic sandbox cleanup
+  await using sandbox = await createDisposableSandbox({
+    timeout: context.timeout,
+    memoryLimit: context.memoryLimit,
+    workingDir: context.workingDir,
+  });
+
+  try {
+    // Create host bridge with all SDK functions
+    const hostFunctions = createHostBridge(context.workingDir);
+
+    // Generate guest SDK code
+    const guestSDK = generateGuestSDKCode();
+
+    // Wrap user code with SDK
+    const wrappedCode = `
+${guestSDK}
+
+const __userFn = async () => {
+  ${code}
+};
+
+export default await __userFn();
+`;
+
+    // Execute in sandbox
+    const result = await sandbox.execute(wrappedCode, hostFunctions);
+
+    if (!result.ok) {
+      return {
+        success: false,
+        output: null,
+        error: sanitizeError(new Error(result.error || "Execution failed"), context.workingDir),
+        stats: {
+          executionTimeMs: Date.now() - startTime,
+          tokensUsed: 0,
+        },
+        logs: result.logs,
+      };
+    }
+
+    // Count output tokens
+    const outputStr = JSON.stringify(result.data, null, 2);
+    const tokensUsed = countTokens(outputStr);
+
+    // Check output size
+    if (tokensUsed > context.maxOutputTokens) {
+      // Auto-compress large output
+      const compressed = compressAuto(outputStr);
+      return {
+        success: true,
+        output: compressed.compressed,
+        stats: {
+          executionTimeMs: Date.now() - startTime,
+          tokensUsed: compressed.stats.compressed,
+        },
+        logs: result.logs,
+      };
+    }
+
+    return {
+      success: true,
+      output: result.data,
+      stats: {
+        executionTimeMs: Date.now() - startTime,
+        tokensUsed,
+      },
+      logs: result.logs,
+    };
+  } catch (error) {
+    const err = error instanceof Error ? error : new Error(String(error));
+    return {
+      success: false,
+      output: null,
+      error: sanitizeError(err, context.workingDir),
+      stats: {
+        executionTimeMs: Date.now() - startTime,
+        tokensUsed: 0,
+      },
+    };
+  }
+} // Sandbox auto-disposed here
+
+/**
+ * Execute code using legacy Function constructor (fast but not fully isolated)
+ * Uses `using` for automatic timer cleanup.
+ */
+async function executeSandboxLegacy(
   code: string,
   context: ExecutionContext
 ): Promise<ExecutionResult> {
@@ -173,6 +303,9 @@ export async function executeSandbox(
     };
   }
 
+  // Use `using` for automatic timer cleanup
+  using timer = createTimeout(context.timeout);
+
   try {
     // Create SDK
     const ctx = createSDK(context.workingDir);
@@ -188,12 +321,23 @@ export async function executeSandbox(
     // Note: This is not fully isolated, but provides some protection
     const sandboxedFn = new Function("ctx", wrappedCode);
 
-    // Execute with timeout
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error("Execution timeout")), context.timeout);
-    });
+    // Execute with timeout check
+    const executionPromise = sandboxedFn(ctx) as Promise<unknown>;
 
-    const result = await Promise.race([sandboxedFn(ctx), timeoutPromise]);
+    // Race against timeout using disposable timer
+    const result = await Promise.race([
+      executionPromise,
+      new Promise<never>((_, reject) => {
+        const checkInterval = setInterval(() => {
+          if (timer.expired) {
+            clearInterval(checkInterval);
+            reject(new Error("Execution timeout"));
+          }
+        }, 50);
+        // Cleanup interval when execution completes
+        executionPromise.finally(() => clearInterval(checkInterval));
+      }),
+    ]);
 
     // Count output tokens
     const outputStr = JSON.stringify(result, null, 2);
@@ -233,4 +377,27 @@ export async function executeSandbox(
       },
     };
   }
+} // Timer auto-cleared here
+
+/**
+ * Execute code in sandbox
+ *
+ * Uses QuickJS WebAssembly sandbox if DISTILL_USE_QUICKJS=true,
+ * otherwise falls back to legacy Function constructor.
+ */
+export async function executeSandbox(
+  code: string,
+  context: ExecutionContext
+): Promise<ExecutionResult> {
+  if (USE_QUICKJS) {
+    return executeSandboxQuickJS(code, context);
+  }
+  return executeSandboxLegacy(code, context);
+}
+
+/**
+ * Check if QuickJS sandbox is enabled
+ */
+export function isQuickJSEnabled(): boolean {
+  return USE_QUICKJS;
 }

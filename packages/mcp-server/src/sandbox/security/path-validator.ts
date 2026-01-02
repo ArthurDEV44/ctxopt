@@ -2,14 +2,23 @@
  * Path Validator
  *
  * Validates file paths for sandbox access.
- * Reuses patterns from smart-file-read.ts for consistency.
+ * Provides both legacy interface and Result-based API with branded types.
  */
 
 import * as path from "path";
 import * as fs from "fs";
+import { ok, err, type Result } from "neverthrow";
+import {
+  type ValidatedPath,
+  type SafePattern,
+  brandAsValidatedPath,
+  brandAsSafePattern,
+} from "../branded-types.js";
+import { fileError, type FileError } from "../errors.js";
 
 /**
  * Blocked file patterns (sensitive files)
+ * Uses satisfies to ensure type safety while preserving literal types
  */
 const BLOCKED_PATTERNS = [
   /\.env($|\.)/i, // Environment files
@@ -26,10 +35,10 @@ const BLOCKED_PATTERNS = [
   /\.netrc/i, // Network credentials
   /\.npmrc/i, // NPM credentials
   /\.pypirc/i, // PyPI credentials
-];
+] as const satisfies readonly RegExp[];
 
 /**
- * Validation result
+ * Validation result (legacy interface)
  */
 export interface PathValidation {
   safe: boolean;
@@ -38,7 +47,7 @@ export interface PathValidation {
 }
 
 /**
- * Validate a file path for sandbox access
+ * Validate a file path for sandbox access (legacy API)
  */
 export function validatePath(
   filePath: string,
@@ -98,7 +107,7 @@ export function validatePath(
 }
 
 /**
- * Validate a glob pattern
+ * Validate a glob pattern (legacy API)
  */
 export function validateGlobPattern(
   pattern: string,
@@ -134,4 +143,92 @@ export function validateGlobPattern(
     safe: true,
     resolvedPath: path.join(workingDir, pattern),
   };
+}
+
+// ============================================================================
+// Result-based API with Branded Types
+// ============================================================================
+
+/**
+ * Validate a file path and return a branded ValidatedPath on success.
+ *
+ * @param filePath - The path to validate
+ * @param workingDir - The sandbox working directory
+ * @returns Result<ValidatedPath, FileError>
+ *
+ * @example
+ * ```typescript
+ * const result = validatePathResult("src/index.ts", "/project");
+ * if (result.isOk()) {
+ *   // result.value is ValidatedPath, safe to use
+ *   const content = fs.readFileSync(result.value);
+ * } else {
+ *   console.error(result.error.message);
+ * }
+ * ```
+ */
+export function validatePathResult(
+  filePath: string,
+  workingDir: string
+): Result<ValidatedPath, FileError> {
+  const validation = validatePath(filePath, workingDir);
+
+  if (!validation.safe) {
+    return err(
+      fileError.pathValidation(filePath, validation.error ?? "Unknown validation error")
+    );
+  }
+
+  // Brand the validated path
+  return ok(brandAsValidatedPath(validation.resolvedPath!));
+}
+
+/**
+ * Validate a glob pattern and return a branded SafePattern on success.
+ *
+ * @param pattern - The glob pattern to validate
+ * @param workingDir - The sandbox working directory
+ * @returns Result<SafePattern, FileError>
+ *
+ * @example
+ * ```typescript
+ * const result = validatePatternResult("src/**\/*.ts", "/project");
+ * if (result.isOk()) {
+ *   // result.value is SafePattern, safe to use for glob operations
+ *   const files = glob.sync(result.value);
+ * }
+ * ```
+ */
+export function validatePatternResult(
+  pattern: string,
+  workingDir: string
+): Result<SafePattern, FileError> {
+  const validation = validateGlobPattern(pattern, workingDir);
+
+  if (!validation.safe) {
+    return err(
+      fileError.patternInvalid(pattern, validation.error ?? "Unknown validation error")
+    );
+  }
+
+  // Brand the validated pattern
+  return ok(brandAsSafePattern(pattern));
+}
+
+/**
+ * Check if a path matches any blocked patterns.
+ * Useful for pre-validation checks.
+ */
+export function isBlockedPath(filePath: string): boolean {
+  const fileName = path.basename(filePath);
+  return BLOCKED_PATTERNS.some(
+    (pattern) => pattern.test(fileName) || pattern.test(filePath)
+  );
+}
+
+/**
+ * Get the list of blocked patterns (for documentation/testing).
+ */
+export function getBlockedPatterns(): readonly RegExp[] {
+  return BLOCKED_PATTERNS;
 }

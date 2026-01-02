@@ -5,7 +5,7 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { createSearchAPI } from "./search.js";
+import { createSearchAPILegacy } from "./search.js";
 import type { HostCallbacks } from "../types.js";
 import * as fs from "fs";
 import * as path from "path";
@@ -49,11 +49,11 @@ function createMockCallbacks(workingDir: string): HostCallbacks {
 }
 
 describe("Search SDK", () => {
-  let search: ReturnType<typeof createSearchAPI>;
+  let search: ReturnType<typeof createSearchAPILegacy>;
 
   beforeAll(() => {
     const callbacks = createMockCallbacks(projectRoot);
-    search = createSearchAPI(projectRoot, callbacks);
+    search = createSearchAPILegacy(projectRoot, callbacks);
   });
 
   describe("grep", () => {
@@ -93,7 +93,7 @@ describe("Search SDK", () => {
     });
 
     it("should throw for invalid regex", () => {
-      expect(() => search.grep("[invalid", "**/*.ts")).toThrow("Invalid regex pattern");
+      expect(() => search.grep("[invalid", "**/*.ts")).toThrow("Invalid regex");
     });
   });
 

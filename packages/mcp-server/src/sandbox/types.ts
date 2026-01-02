@@ -6,6 +6,7 @@
 
 import type { SupportedLanguage, ElementType } from "../ast/types.js";
 import type { ContentType } from "../compressors/types.js";
+import type { PipelineFactory } from "./sdk/pipeline-builder.types.js";
 
 /**
  * Execution context passed to sandbox
@@ -18,14 +19,25 @@ export interface ExecutionContext {
 }
 
 /**
+ * Execution limits configuration
+ */
+export interface ExecutionLimits {
+  readonly timeout: number;
+  readonly maxTimeout: number;
+  readonly memoryLimit: number;
+  readonly maxOutputTokens: number;
+}
+
+/**
  * Default execution limits
+ * Uses satisfies to ensure type safety while preserving literal types
  */
 export const DEFAULT_LIMITS = {
   timeout: 5000, // 5 seconds
   maxTimeout: 30000, // 30 seconds max
   memoryLimit: 128, // 128MB
   maxOutputTokens: 4000,
-} as const;
+} as const satisfies ExecutionLimits;
 
 /**
  * Compression result from SDK
@@ -176,6 +188,11 @@ export interface CtxOptSDK {
     hasMemory: () => boolean;
     getSummary: () => ConversationMemorySummary | null;
   };
+
+  /**
+   * Fluent pipeline builder API
+   */
+  pipe: PipelineFactory;
 }
 
 /**
@@ -189,6 +206,8 @@ export interface ExecutionResult {
     executionTimeMs: number;
     tokensUsed: number;
   };
+  /** Console logs captured from sandbox execution (QuickJS only) */
+  logs?: string[];
 }
 
 /**

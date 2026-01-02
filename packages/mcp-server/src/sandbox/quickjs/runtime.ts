@@ -1,0 +1,264 @@
+/**
+ * QuickJS WebAssembly Runtime
+ *
+ * Creates an isolated sandbox using QuickJS compiled to WebAssembly.
+ * Provides complete isolation from the host environment.
+ *
+ * @see https://github.com/sebastianwessel/quickjs
+ */
+
+import variant from "@jitl/quickjs-ng-wasmfile-release-sync";
+import { loadQuickJs, type SandboxOptions } from "@sebastianwessel/quickjs";
+
+/**
+ * Options for creating a QuickJS sandbox runtime
+ */
+export interface QuickJSRuntimeOptions {
+  /** Execution timeout in milliseconds */
+  timeout: number;
+  /** Memory limit in MB */
+  memoryLimit: number;
+  /** Working directory for the sandbox */
+  workingDir: string;
+}
+
+/**
+ * Result from sandbox execution
+ */
+export interface QuickJSExecutionResult {
+  ok: boolean;
+  data?: unknown;
+  error?: string;
+  logs?: string[];
+}
+
+/**
+ * Host functions that will be exposed to the sandbox via env
+ */
+export interface QuickJSHostFunctions {
+  // Files
+  __hostReadFile: (path: string) => string;
+  __hostFileExists: (path: string) => boolean;
+  __hostGlob: (pattern: string) => string[];
+
+  // Compress
+  __hostCompressAuto: (content: string, hint?: string) => unknown;
+  __hostCompressLogs: (logs: string) => unknown;
+  __hostCompressDiff: (diff: string) => unknown;
+  __hostCompressSemantic: (content: string, ratio?: number) => unknown;
+
+  // Code
+  __hostCodeParse: (content: string, lang: string) => unknown;
+  __hostCodeExtract: (content: string, lang: string, target: unknown) => unknown;
+  __hostCodeSkeleton: (content: string, lang: string) => string;
+
+  // Utils
+  __hostCountTokens: (text: string) => number;
+  __hostDetectType: (content: string) => string;
+  __hostDetectLanguage: (path: string) => string;
+
+  // Git
+  __hostGitDiff: (ref?: string) => unknown;
+  __hostGitLog: (limit?: number) => unknown;
+  __hostGitBlame: (file: string, line?: number) => unknown;
+  __hostGitStatus: () => unknown;
+  __hostGitBranch: () => unknown;
+
+  // Search
+  __hostSearchGrep: (pattern: string, glob?: string) => unknown;
+  __hostSearchSymbols: (query: string, glob?: string) => unknown;
+  __hostSearchFiles: (pattern: string) => unknown;
+  __hostSearchReferences: (symbol: string, glob?: string) => unknown;
+
+  // Analyze
+  __hostAnalyzeDeps: (file: string) => unknown;
+  __hostAnalyzeCallGraph: (fn: string, file: string, depth?: number) => unknown;
+  __hostAnalyzeExports: (file: string) => unknown;
+  __hostAnalyzeStructure: (dir?: string, depth?: number) => unknown;
+
+  // Pipeline
+  __hostPipeline: (steps: unknown[]) => unknown;
+  __hostPipelineOverview: (dir?: string) => unknown;
+  __hostPipelineFindUsages: (symbol: string, glob?: string) => unknown;
+  __hostPipelineAnalyzeDeps: (file: string, depth?: number) => unknown;
+
+  // Multifile
+  __hostMultifileCompress: (patterns: string[], options?: unknown) => unknown;
+  __hostMultifileExtractShared: (patterns: string[]) => unknown;
+  __hostMultifileChunk: (patterns: string[], maxTokens: number) => unknown;
+  __hostMultifileSkeletons: (patterns: string[], depth?: number) => unknown;
+  __hostMultifileReadAll: (patterns: string[]) => unknown;
+
+  // Conversation
+  __hostConversationCompress: (messages: unknown[], options?: unknown) => unknown;
+  __hostConversationCreateMemory: (messages: unknown[], options?: unknown) => unknown;
+  __hostConversationExtractDecisions: (messages: unknown[]) => unknown;
+  __hostConversationExtractCodeRefs: (messages: unknown[]) => unknown;
+}
+
+// Singleton for the loaded QuickJS runtime (expensive to load)
+let quickJSLoader: ReturnType<typeof loadQuickJs> | null = null;
+
+/**
+ * Get or create the QuickJS loader (singleton pattern)
+ */
+async function getQuickJSLoader() {
+  if (!quickJSLoader) {
+    quickJSLoader = loadQuickJs(variant);
+  }
+  return quickJSLoader;
+}
+
+/**
+ * Create a QuickJS sandbox runtime with the given options
+ */
+export async function createQuickJSRuntime(options: QuickJSRuntimeOptions) {
+  const { runSandboxed } = await getQuickJSLoader();
+
+  return {
+    /**
+     * Execute code in the sandbox with host functions exposed via env
+     */
+    async execute(
+      code: string,
+      hostFunctions: QuickJSHostFunctions
+    ): Promise<QuickJSExecutionResult> {
+      const logs: string[] = [];
+
+      const sandboxOptions: SandboxOptions = {
+        // Security: Disable all external access
+        allowFetch: false,
+        allowFs: false,
+
+        // Resource limits
+        executionTimeout: options.timeout,
+        memoryLimit: options.memoryLimit * 1024 * 1024, // Convert MB to bytes
+
+        // Custom console to capture logs
+        console: {
+          log: (...args) => logs.push(args.map(String).join(" ")),
+          error: (...args) => logs.push(`[ERROR] ${args.map(String).join(" ")}`),
+          warn: (...args) => logs.push(`[WARN] ${args.map(String).join(" ")}`),
+          info: (...args) => logs.push(`[INFO] ${args.map(String).join(" ")}`),
+          debug: (...args) => logs.push(`[DEBUG] ${args.map(String).join(" ")}`),
+        },
+
+        // Expose host functions via env
+        // The env object is accessible as `env` in the sandbox
+        env: {
+          WORKING_DIR: options.workingDir,
+          ...hostFunctions,
+        },
+      };
+
+      try {
+        const result = await runSandboxed(
+          async ({ evalCode }) => evalCode(code),
+          sandboxOptions
+        );
+
+        if (result.ok) {
+          return {
+            ok: true,
+            data: result.data,
+            logs,
+          };
+        } else {
+          return {
+            ok: false,
+            error: String(result.error),
+            logs,
+          };
+        }
+      } catch (error) {
+        return {
+          ok: false,
+          error: error instanceof Error ? error.message : String(error),
+          logs,
+        };
+      }
+    },
+  };
+}
+
+/**
+ * Generate the SDK wrapper code that runs inside the sandbox.
+ * This creates a `ctx` object that maps to host functions exposed via env.
+ */
+export function generateGuestSDKCode(): string {
+  return `
+// SDK wrapper - maps ctx methods to host functions via env
+const ctx = {
+  files: {
+    read: (path) => env.__hostReadFile(path),
+    exists: (path) => env.__hostFileExists(path),
+    glob: (pattern) => env.__hostGlob(pattern),
+  },
+
+  compress: {
+    auto: (content, hint) => env.__hostCompressAuto(content, hint),
+    logs: (logs) => env.__hostCompressLogs(logs),
+    diff: (diff) => env.__hostCompressDiff(diff),
+    semantic: (content, ratio) => env.__hostCompressSemantic(content, ratio),
+  },
+
+  code: {
+    parse: (content, lang) => env.__hostCodeParse(content, lang),
+    extract: (content, lang, target) => env.__hostCodeExtract(content, lang, JSON.stringify(target)),
+    skeleton: (content, lang) => env.__hostCodeSkeleton(content, lang),
+  },
+
+  utils: {
+    countTokens: (text) => env.__hostCountTokens(text),
+    detectType: (content) => env.__hostDetectType(content),
+    detectLanguage: (path) => env.__hostDetectLanguage(path),
+  },
+
+  git: {
+    diff: (ref) => env.__hostGitDiff(ref),
+    log: (limit) => env.__hostGitLog(limit),
+    blame: (file, line) => env.__hostGitBlame(file, line),
+    status: () => env.__hostGitStatus(),
+    branch: () => env.__hostGitBranch(),
+  },
+
+  search: {
+    grep: (pattern, glob) => env.__hostSearchGrep(pattern, glob),
+    symbols: (query, glob) => env.__hostSearchSymbols(query, glob),
+    files: (pattern) => env.__hostSearchFiles(pattern),
+    references: (symbol, glob) => env.__hostSearchReferences(symbol, glob),
+  },
+
+  analyze: {
+    dependencies: (file) => env.__hostAnalyzeDeps(file),
+    callGraph: (fn, file, depth) => env.__hostAnalyzeCallGraph(fn, file, depth),
+    exports: (file) => env.__hostAnalyzeExports(file),
+    structure: (dir, depth) => env.__hostAnalyzeStructure(dir, depth),
+  },
+
+  pipeline: Object.assign(
+    (steps) => env.__hostPipeline(JSON.stringify(steps)),
+    {
+      codebaseOverview: (dir) => env.__hostPipelineOverview(dir),
+      findUsages: (symbol, glob) => env.__hostPipelineFindUsages(symbol, glob),
+      analyzeDeps: (file, depth) => env.__hostPipelineAnalyzeDeps(file, depth),
+    }
+  ),
+
+  multifile: {
+    compress: (patterns, options) => env.__hostMultifileCompress(patterns, JSON.stringify(options)),
+    extractShared: (patterns) => env.__hostMultifileExtractShared(patterns),
+    chunk: (patterns, maxTokens) => env.__hostMultifileChunk(patterns, maxTokens),
+    skeletons: (patterns, depth) => env.__hostMultifileSkeletons(patterns, depth),
+    readAll: (patterns) => env.__hostMultifileReadAll(patterns),
+  },
+
+  conversation: {
+    compress: (messages, options) => env.__hostConversationCompress(JSON.stringify(messages), JSON.stringify(options)),
+    createMemory: (messages, options) => env.__hostConversationCreateMemory(JSON.stringify(messages), JSON.stringify(options)),
+    extractDecisions: (messages) => env.__hostConversationExtractDecisions(JSON.stringify(messages)),
+    extractCodeRefs: (messages) => env.__hostConversationExtractCodeRefs(JSON.stringify(messages)),
+  },
+};
+`;
+}

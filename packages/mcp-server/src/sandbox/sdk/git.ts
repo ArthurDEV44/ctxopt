@@ -3,8 +3,10 @@
  *
  * Git operations for sandbox use.
  * Uses child_process.execSync for git commands.
+ * Returns Result types for type-safe error handling.
  */
 
+import { Result, ok, err } from "neverthrow";
 import { execSync } from "child_process";
 import type {
   GitDiff,
@@ -15,12 +17,18 @@ import type {
   GitStatus,
   GitBranch,
 } from "../types.js";
+import { GitError, gitError } from "../errors.js";
 import { validatePath } from "../security/path-validator.js";
+import {
+  type SanitizedGitArg,
+  brandAsSanitizedGitArg,
+} from "../branded-types.js";
 
-const GIT_TIMEOUT = 5000; // 5 seconds
+const GIT_TIMEOUT = 5000 as const satisfies number; // 5 seconds
 
 /**
  * Blocked git commands that could access network or modify remote state
+ * Uses satisfies to ensure type safety while preserving literal types
  */
 const BLOCKED_GIT_COMMANDS = [
   "push",
@@ -31,44 +39,56 @@ const BLOCKED_GIT_COMMANDS = [
   "submodule",
   "ls-remote",
   "archive",
-] as const;
+] as const satisfies readonly string[];
+
+type BlockedGitCommand = (typeof BLOCKED_GIT_COMMANDS)[number];
 
 /**
- * Sanitize git argument to prevent shell injection
+ * Sanitize git argument to prevent shell injection.
+ * Returns a branded SanitizedGitArg on success.
  */
-function sanitizeGitArg(arg: string): string {
+function sanitizeGitArg(arg: string): Result<SanitizedGitArg, GitError> {
   // Block shell metacharacters that could enable command injection
   if (/[;&|`$(){}[\]<>\\!'"]/.test(arg)) {
-    throw new Error(`Invalid git argument: contains shell metacharacters`);
+    return err(gitError.invalidArg(`contains shell metacharacters: ${arg}`));
   }
   // Block newlines which could inject additional commands
   if (/[\r\n]/.test(arg)) {
-    throw new Error(`Invalid git argument: contains newlines`);
+    return err(gitError.invalidArg(`contains newlines: ${arg}`));
   }
-  return arg;
+  return ok(brandAsSanitizedGitArg(arg));
 }
 
 /**
  * Validate git command is not blocked
  */
-function validateGitCommand(command: string): void {
+function validateGitCommand(command: string): Result<void, GitError> {
   const cmd = command.toLowerCase();
-  if (BLOCKED_GIT_COMMANDS.includes(cmd as (typeof BLOCKED_GIT_COMMANDS)[number])) {
-    throw new Error(`Git command '${command}' is blocked for security reasons`);
+  if (BLOCKED_GIT_COMMANDS.includes(cmd as BlockedGitCommand)) {
+    return err(gitError.blockedCommand(command));
   }
+  return ok(undefined);
 }
 
 /**
- * Execute git command safely
+ * Execute git command safely.
+ * All arguments are sanitized to SanitizedGitArg before execution.
  */
-function execGit(args: string[], workingDir: string): string {
+function execGit(args: string[], workingDir: string): Result<string, GitError> {
   // Validate the git subcommand
   if (args.length > 0 && args[0]) {
-    validateGitCommand(args[0]);
+    const cmdResult = validateGitCommand(args[0]);
+    if (cmdResult.isErr()) return err(cmdResult.error);
   }
 
-  // Sanitize all arguments
-  const sanitizedArgs = args.map(sanitizeGitArg);
+  // Sanitize all arguments - collect as branded types
+  const sanitizedArgs: SanitizedGitArg[] = [];
+  for (const arg of args) {
+    const result = sanitizeGitArg(arg);
+    if (result.isErr()) return err(result.error);
+    sanitizedArgs.push(result.value);
+  }
+
   try {
     const result = execSync(`git ${sanitizedArgs.join(" ")}`, {
       cwd: workingDir,
@@ -76,14 +96,14 @@ function execGit(args: string[], workingDir: string): string {
       encoding: "utf-8",
       stdio: ["pipe", "pipe", "pipe"],
     });
-    return result.trim();
+    return ok(result.trim());
   } catch (error) {
-    const err = error as { stderr?: string; message?: string };
-    const stderr = err.stderr?.toString().trim() || "";
+    const e = error as { stderr?: string; message?: string };
+    const stderr = e.stderr?.toString().trim() || "";
     if (stderr.includes("not a git repository")) {
-      throw new Error("Not a git repository");
+      return err(gitError.notRepo(workingDir));
     }
-    throw new Error(stderr || err.message || "Git command failed");
+    return err(gitError.commandFailed(`git ${args[0] || ""}`, stderr || e.message || "Git command failed"));
   }
 }
 
@@ -275,6 +295,7 @@ function parseStatusOutput(
 
 /**
  * Create Git API for sandbox
+ * All methods return Result<T, GitError> for type-safe error handling
  */
 export function createGitAPI(workingDir: string) {
   return {
@@ -282,41 +303,47 @@ export function createGitAPI(workingDir: string) {
      * Get git diff
      * @param ref - Optional ref to diff against (default: HEAD)
      */
-    diff(ref?: string): GitDiff {
+    diff(ref?: string): Result<GitDiff, GitError> {
       const refArg = ref || "HEAD";
 
       // Get the raw diff
-      const raw = execGit(["diff", refArg], workingDir);
+      const rawResult = execGit(["diff", refArg], workingDir);
+      if (rawResult.isErr()) return err(rawResult.error);
 
       // Get stats
-      const numstat = execGit(["diff", "--numstat", refArg], workingDir);
-      const { files, additions, deletions } = parseDiffStats(numstat);
+      const numstatResult = execGit(["diff", "--numstat", refArg], workingDir);
+      if (numstatResult.isErr()) return err(numstatResult.error);
+
+      const { files, additions, deletions } = parseDiffStats(numstatResult.value);
 
       // Get file statuses
-      const nameStatus = execGit(["diff", "--name-status", refArg], workingDir);
-      const refinedFiles = refineFileStatuses(files, nameStatus);
+      const nameStatusResult = execGit(["diff", "--name-status", refArg], workingDir);
+      if (nameStatusResult.isErr()) return err(nameStatusResult.error);
 
-      return {
-        raw,
+      const refinedFiles = refineFileStatuses(files, nameStatusResult.value);
+
+      return ok({
+        raw: rawResult.value,
         files: refinedFiles,
         stats: { additions, deletions },
-      };
+      });
     },
 
     /**
      * Get git log
      * @param limit - Number of commits to return (default: 10)
      */
-    log(limit?: number): GitCommit[] {
+    log(limit?: number): Result<GitCommit[], GitError> {
       const count = Math.min(limit || 10, 100); // Cap at 100
       const format = "%H%n%h%n%an%n%aI%n%s%n---COMMIT---";
 
-      const output = execGit(
+      const result = execGit(
         ["log", `-${count}`, `--format=${format}`],
         workingDir
       );
 
-      return parseLogOutput(output);
+      if (result.isErr()) return err(result.error);
+      return ok(parseLogOutput(result.value));
     },
 
     /**
@@ -324,11 +351,11 @@ export function createGitAPI(workingDir: string) {
      * @param file - File path to blame
      * @param line - Optional specific line number
      */
-    blame(file: string, line?: number): GitBlame {
+    blame(file: string, line?: number): Result<GitBlame, GitError> {
       // Validate file path
       const validation = validatePath(file, workingDir);
       if (!validation.safe) {
-        throw new Error(validation.error || "Invalid file path");
+        return err(gitError.invalidArg(validation.error || "Invalid file path"));
       }
 
       const args = ["blame", "--porcelain"];
@@ -339,43 +366,86 @@ export function createGitAPI(workingDir: string) {
 
       args.push("--", file);
 
-      const output = execGit(args, workingDir);
-      return { lines: parseBlameOutput(output) };
+      const result = execGit(args, workingDir);
+      if (result.isErr()) return err(result.error);
+
+      return ok({ lines: parseBlameOutput(result.value) });
     },
 
     /**
      * Get git status
      */
-    status(): GitStatus {
-      const porcelain = execGit(["status", "--porcelain"], workingDir);
-      const branchInfo = execGit(["status", "--porcelain", "-b"], workingDir);
+    status(): Result<GitStatus, GitError> {
+      const porcelainResult = execGit(["status", "--porcelain"], workingDir);
+      if (porcelainResult.isErr()) return err(porcelainResult.error);
+
+      const branchInfoResult = execGit(["status", "--porcelain", "-b"], workingDir);
+      if (branchInfoResult.isErr()) return err(branchInfoResult.error);
 
       // First line of -b output is branch info
-      const firstLine = branchInfo.split("\n")[0] || "";
+      const firstLine = branchInfoResult.value.split("\n")[0] || "";
 
-      return parseStatusOutput(porcelain, firstLine);
+      return ok(parseStatusOutput(porcelainResult.value, firstLine));
     },
 
     /**
      * Get git branch info
      */
-    branch(): GitBranch {
+    branch(): Result<GitBranch, GitError> {
       // Get current branch
-      let current = "";
-      try {
-        current = execGit(["rev-parse", "--abbrev-ref", "HEAD"], workingDir);
-      } catch {
-        current = "HEAD";
-      }
+      const currentResult = execGit(["rev-parse", "--abbrev-ref", "HEAD"], workingDir);
+      const current = currentResult.isOk() ? currentResult.value : "HEAD";
 
       // Get all branches
-      const branchOutput = execGit(["branch", "--format=%(refname:short)"], workingDir);
-      const branches = branchOutput
+      const branchResult = execGit(["branch", "--format=%(refname:short)"], workingDir);
+      if (branchResult.isErr()) return err(branchResult.error);
+
+      const branches = branchResult.value
         .split("\n")
         .map((b) => b.trim())
         .filter(Boolean);
 
-      return { current, branches };
+      return ok({ current, branches });
+    },
+  };
+}
+
+/**
+ * Legacy API that throws on error (for backward compatibility)
+ * Use createGitAPI() for new code with Result types
+ */
+export function createGitAPILegacy(workingDir: string) {
+  const api = createGitAPI(workingDir);
+
+  return {
+    diff(ref?: string): GitDiff {
+      const result = api.diff(ref);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    log(limit?: number): GitCommit[] {
+      const result = api.log(limit);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    blame(file: string, line?: number): GitBlame {
+      const result = api.blame(file, line);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    status(): GitStatus {
+      const result = api.status();
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    branch(): GitBranch {
+      const result = api.branch();
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
     },
   };
 }

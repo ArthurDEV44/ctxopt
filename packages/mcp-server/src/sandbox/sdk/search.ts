@@ -3,8 +3,10 @@
  *
  * Code search operations for sandbox use.
  * Provides grep, symbol search, file search, and reference finding.
+ * Returns Result types for type-safe error handling.
  */
 
+import { Result, ok, err } from "neverthrow";
 import * as fs from "fs";
 import * as path from "path";
 import type {
@@ -18,6 +20,7 @@ import type {
   HostCallbacks,
 } from "../types.js";
 import type { ElementType } from "../../ast/types.js";
+import { SearchError, searchError } from "../errors.js";
 import { parseFile, searchElements } from "../../ast/index.js";
 import { detectLanguageFromPath } from "../../utils/language-detector.js";
 import { validatePath, validateGlobPattern } from "../security/path-validator.js";
@@ -124,6 +127,7 @@ function searchInFile(
 
 /**
  * Create Search API for sandbox
+ * All methods return Result<T, SearchError> for type-safe error handling
  */
 export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
   return {
@@ -132,13 +136,13 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
      * @param pattern - Regex pattern to search for
      * @param glob - Optional glob pattern to filter files (default: all supported code files)
      */
-    grep(pattern: string, glob?: string): GrepResult {
+    grep(pattern: string, glob?: string): Result<GrepResult, SearchError> {
       const filePattern = glob ?? "**/*.{ts,tsx,js,jsx,py,go,rs,php,swift}";
 
       // Validate glob pattern
       const validation = validateGlobPattern(filePattern, workingDir);
       if (!validation.safe) {
-        throw new Error(validation.error ?? "Invalid glob pattern");
+        return err(searchError.searchFailed(validation.error ?? "Invalid glob pattern"));
       }
 
       // Find matching files
@@ -149,8 +153,9 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
       let regex: RegExp;
       try {
         regex = new RegExp(pattern, "g");
-      } catch {
-        throw new Error(`Invalid regex pattern: ${pattern}`);
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        return err(searchError.invalidRegex(pattern, message));
       }
 
       // Search each file
@@ -176,11 +181,11 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
         }
       }
 
-      return {
+      return ok({
         matches: allMatches,
         totalMatches: allMatches.length,
         filesSearched: files.length,
-      };
+      });
     },
 
     /**
@@ -188,13 +193,13 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
      * @param query - Symbol name to search for (supports partial match)
      * @param glob - Optional glob pattern to filter files
      */
-    symbols(query: string, glob?: string): SymbolResult {
+    symbols(query: string, glob?: string): Result<SymbolResult, SearchError> {
       const filePattern = glob ?? "**/*.{ts,tsx,js,jsx,py,go,rs,php,swift}";
 
       // Validate glob pattern
       const validation = validateGlobPattern(filePattern, workingDir);
       if (!validation.safe) {
-        throw new Error(validation.error ?? "Invalid glob pattern");
+        return err(searchError.searchFailed(validation.error ?? "Invalid glob pattern"));
       }
 
       // Find matching files
@@ -253,21 +258,21 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
         }
       }
 
-      return {
+      return ok({
         symbols: allSymbols,
         totalMatches: allSymbols.length,
-      };
+      });
     },
 
     /**
      * Search for files by pattern
      * @param pattern - Glob pattern to match files
      */
-    files(pattern: string): FileResult {
+    files(pattern: string): Result<FileResult, SearchError> {
       // Validate glob pattern
       const validation = validateGlobPattern(pattern, workingDir);
       if (!validation.safe) {
-        throw new Error(validation.error ?? "Invalid glob pattern");
+        return err(searchError.searchFailed(validation.error ?? "Invalid glob pattern"));
       }
 
       // Find matching files
@@ -293,10 +298,10 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
         }
       }
 
-      return {
+      return ok({
         files: fileMatches,
         totalMatches: fileMatches.length,
-      };
+      });
     },
 
     /**
@@ -304,13 +309,13 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
      * @param symbol - Symbol name to find references for
      * @param glob - Optional glob pattern to filter files
      */
-    references(symbol: string, glob?: string): ReferenceMatch[] {
+    references(symbol: string, glob?: string): Result<ReferenceMatch[], SearchError> {
       const filePattern = glob ?? "**/*.{ts,tsx,js,jsx,py,go,rs,php,swift}";
 
       // Validate glob pattern
       const validation = validateGlobPattern(filePattern, workingDir);
       if (!validation.safe) {
-        throw new Error(validation.error ?? "Invalid glob pattern");
+        return err(searchError.searchFailed(validation.error ?? "Invalid glob pattern"));
       }
 
       // Find matching files
@@ -396,7 +401,7 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
         }
       }
 
-      return references;
+      return ok(references);
     },
   };
 }
@@ -406,4 +411,38 @@ export function createSearchAPI(workingDir: string, callbacks: HostCallbacks) {
  */
 function escapeRegex(str: string): string {
   return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Legacy API that throws on error (for backward compatibility)
+ * Use createSearchAPI() for new code with Result types
+ */
+export function createSearchAPILegacy(workingDir: string, callbacks: HostCallbacks) {
+  const api = createSearchAPI(workingDir, callbacks);
+
+  return {
+    grep(pattern: string, glob?: string): GrepResult {
+      const result = api.grep(pattern, glob);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    symbols(query: string, glob?: string): SymbolResult {
+      const result = api.symbols(query, glob);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    files(pattern: string): FileResult {
+      const result = api.files(pattern);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+
+    references(symbol: string, glob?: string): ReferenceMatch[] {
+      const result = api.references(symbol, glob);
+      if (result.isErr()) throw new Error(result.error.message);
+      return result.value;
+    },
+  };
 }

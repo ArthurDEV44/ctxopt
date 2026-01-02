@@ -18,3 +18,19 @@ export type {
   CodeElement,
 } from "./types.js";
 export { DEFAULT_LIMITS } from "./types.js";
+
+// Disposable utilities (TS 5.2+ using keyword)
+export {
+  createTimeout,
+  createDisposableSandbox,
+  createExecutionResources,
+  disposable,
+  asyncDisposable,
+} from "./disposables.js";
+export type {
+  DisposableTimer,
+  DisposableSandboxRuntime,
+  ExecutionResources,
+  SandboxRuntimeOptions,
+  SandboxExecutionResult,
+} from "./disposables.js";

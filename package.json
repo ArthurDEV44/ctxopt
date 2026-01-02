@@ -13,6 +13,8 @@
     "check-types": "turbo run check-types"
   },
   "devDependencies": {
+    "distill-mcp": "workspace:*",
+    "expect-type": "^1.3.0",
     "prettier": "^3.7.4",
     "turbo": "^2.6.3",
     "typescript": "5.9.2"

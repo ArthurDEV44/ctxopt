@@ -7,8 +7,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { analyzeCode, sanitizeError } from "./security/index.js";
 import { validatePath, validateGlobPattern } from "./security/path-validator.js";
-import { executeSandbox } from "./executor.js";
+import { executeSandbox, isQuickJSEnabled } from "./executor.js";
 import { DEFAULT_LIMITS } from "./types.js";
+import { createQuickJSRuntime, generateGuestSDKCode } from "./quickjs/index.js";
 
 describe("Code Analyzer Security", () => {
   describe("analyzeCode", () => {
@@ -239,5 +240,216 @@ describe("SDK Functions", () => {
     `;
     const result = await executeSandbox(code, defaultContext);
     expect(result.success).toBe(true);
+  });
+});
+
+describe("QuickJS Sandbox Isolation", () => {
+  const workingDir = process.cwd();
+
+  describe("createQuickJSRuntime", () => {
+    it("should create a runtime with correct options", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      expect(runtime).toBeDefined();
+      expect(typeof runtime.execute).toBe("function");
+    });
+
+    it("should execute simple code in sandbox", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      const result = await runtime.execute(
+        "export default 1 + 1",
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.data).toBe(2);
+    });
+
+    it("should capture console logs", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      const result = await runtime.execute(
+        `console.log("hello"); export default "done"`,
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.logs).toBeDefined();
+      expect(result.logs?.some((log) => log.includes("hello"))).toBe(true);
+    });
+  });
+
+  describe("generateGuestSDKCode", () => {
+    it("should generate valid SDK code", () => {
+      const code = generateGuestSDKCode();
+
+      expect(code).toContain("const ctx");
+      expect(code).toContain("files:");
+      expect(code).toContain("compress:");
+      expect(code).toContain("code:");
+      expect(code).toContain("utils:");
+      expect(code).toContain("git:");
+      expect(code).toContain("search:");
+      expect(code).toContain("analyze:");
+      expect(code).toContain("pipeline:");
+    });
+  });
+
+  describe("Isolation Security", () => {
+    it("should not have access to real global object", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      const result = await runtime.execute(
+        "export default typeof global",
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      // QuickJS has no Node.js global
+      expect(result.data).toBe("undefined");
+    });
+
+    it("should not have access to real process.env", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      // Try to access real environment variables (should fail or be empty)
+      const result = await runtime.execute(
+        `
+          let hasRealEnv = false;
+          try {
+            // Real Node process.env has PATH, HOME, etc
+            hasRealEnv = process && process.env && (process.env.PATH || process.env.HOME);
+          } catch (e) {
+            hasRealEnv = false;
+          }
+          export default hasRealEnv ? "leaked" : "safe";
+        `,
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.data).toBe("safe");
+    });
+
+    it("should not have access to require", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      const result = await runtime.execute(
+        "export default typeof require",
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.data).toBe("undefined");
+    });
+
+    it("should not be able to use Buffer to access filesystem", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      // Try to use Buffer for file operations (should fail)
+      const result = await runtime.execute(
+        `
+          let canAccessFS = false;
+          try {
+            // Try to create buffer from file (would work in real Node)
+            const fs = require("fs");
+            canAccessFS = true;
+          } catch (e) {
+            canAccessFS = false;
+          }
+          export default canAccessFS ? "leaked" : "safe";
+        `,
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.data).toBe("safe");
+    });
+
+    it("should not have access to Node.js native modules", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 5000,
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      const result = await runtime.execute(
+        `
+          let canLoadNative = false;
+          try {
+            const child_process = require("child_process");
+            canLoadNative = true;
+          } catch (e) {}
+          export default canLoadNative ? "leaked" : "safe";
+        `,
+        {} as any
+      );
+
+      expect(result.ok).toBe(true);
+      expect(result.data).toBe("safe");
+    });
+  });
+
+  describe("Resource Limits", () => {
+    it("should enforce execution timeout", async () => {
+      const runtime = await createQuickJSRuntime({
+        timeout: 100, // Very short timeout
+        memoryLimit: 128,
+        workingDir,
+      });
+
+      const result = await runtime.execute(
+        `
+          let i = 0;
+          while(true) { i++; }
+          export default i;
+        `,
+        {} as any
+      );
+
+      expect(result.ok).toBe(false);
+      expect(result.error).toBeDefined();
+    });
+  });
+
+  describe("Feature Flag", () => {
+    it("should report QuickJS status correctly", () => {
+      const enabled = isQuickJSEnabled();
+      expect(typeof enabled).toBe("boolean");
+
+      // By default, QuickJS is disabled (DISTILL_USE_QUICKJS not set)
+      if (!process.env.DISTILL_USE_QUICKJS) {
+        expect(enabled).toBe(false);
+      }
+    });
   });
 });

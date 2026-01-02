@@ -2,12 +2,15 @@
  * SDK Compress Functions
  *
  * Wraps compression functionality for sandbox use.
+ * Returns Result types for type-safe error handling.
  */
 
+import { Result, ok, err } from "neverthrow";
 import { compressContent, analyzeContent, semanticCompressor } from "../../compressors/index.js";
 import { getSummarizer } from "../../summarizers/index.js";
 import { countTokens } from "../../utils/token-counter.js";
 import type { CompressResult, LogSummary } from "../types.js";
+import { CompressError, compressError } from "../errors.js";
 
 /**
  * Auto-detect content type and apply optimal compression
@@ -34,6 +37,21 @@ export function compressAuto(content: string, hint?: string): CompressResult {
 }
 
 /**
+ * Auto-detect content type and apply optimal compression with Result type
+ */
+export function compressAutoResult(
+  content: string,
+  hint?: string
+): Result<CompressResult, CompressError> {
+  try {
+    return ok(compressAuto(content, hint));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return err(compressError.failed(hint || "auto", message));
+  }
+}
+
+/**
  * Summarize log output
  */
 export function compressLogs(logs: string): LogSummary {
@@ -48,6 +66,18 @@ export function compressLogs(logs: string): LogSummary {
       warningCount: result.warnings?.length || 0,
     },
   };
+}
+
+/**
+ * Summarize log output with Result type
+ */
+export function compressLogsResult(logs: string): Result<LogSummary, CompressError> {
+  try {
+    return ok(compressLogs(logs));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return err(compressError.failed("logs", message));
+  }
 }
 
 /**
@@ -99,9 +129,26 @@ export function compressDiff(diff: string): CompressResult {
 }
 
 /**
+ * Compress git diff output with Result type
+ */
+export function compressDiffResult(diff: string): Result<CompressResult, CompressError> {
+  try {
+    return ok(compressDiff(diff));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return err(compressError.failed("diff", message));
+  }
+}
+
+/**
  * TF-IDF based semantic compression
  */
 export function compressSemantic(content: string, ratio: number = 0.5): CompressResult {
+  // Validate ratio
+  if (ratio <= 0 || ratio > 1) {
+    throw new Error(`Invalid compression ratio: ${ratio} (must be between 0 and 1)`);
+  }
+
   const result = semanticCompressor.compress(content, {
     targetRatio: ratio,
     detail: "normal",
@@ -118,4 +165,24 @@ export function compressSemantic(content: string, ratio: number = 0.5): Compress
       reductionPercent: Math.round((1 - compressedTokens / originalTokens) * 100),
     },
   };
+}
+
+/**
+ * TF-IDF based semantic compression with Result type
+ */
+export function compressSemanticResult(
+  content: string,
+  ratio: number = 0.5
+): Result<CompressResult, CompressError> {
+  // Validate ratio
+  if (ratio <= 0 || ratio > 1) {
+    return err(compressError.invalidRatio(ratio));
+  }
+
+  try {
+    return ok(compressSemantic(content, ratio));
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    return err(compressError.failed("semantic", message));
+  }
 }

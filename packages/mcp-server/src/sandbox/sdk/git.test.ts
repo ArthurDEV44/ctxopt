@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeAll } from "vitest";
-import { createGitAPI } from "./git.js";
+import { createGitAPILegacy } from "./git.js";
 import { execSync } from "child_process";
 
 // Check if git is available in the test environment
@@ -38,10 +38,10 @@ const gitAvailable = isGitAvailable();
 const repoRoot = gitAvailable ? getGitRoot() : null;
 
 describe.skipIf(!gitAvailable || !repoRoot)("Git SDK", () => {
-  let git: ReturnType<typeof createGitAPI>;
+  let git: ReturnType<typeof createGitAPILegacy>;
 
   beforeAll(() => {
-    git = createGitAPI(repoRoot!);
+    git = createGitAPILegacy(repoRoot!);
   });
 
   describe("status", () => {
@@ -177,7 +177,7 @@ describe.skipIf(!gitAvailable || !repoRoot)("Git SDK", () => {
 
   describe("error handling", () => {
     it("should throw for non-git directory", () => {
-      const nonGitApi = createGitAPI("/tmp");
+      const nonGitApi = createGitAPILegacy("/tmp");
       expect(() => nonGitApi.status()).toThrow("Not a git repository");
     });
   });
